@@ -53,7 +53,13 @@ const DB = (() => {
     async init() {
       if (process.env.DATABASE_URL) {
         const { Pool } = require('pg');
-        pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : false, max: 8 });
+        const ssl = process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : false;
+        // Isola os dados deste jogo em seu próprio schema; não usa nem modifica tabelas existentes
+        // em public ou em outros schemas da base Murioo.
+        const bootstrap = new Pool({ connectionString: process.env.DATABASE_URL, ssl, max: 1 });
+        try { await bootstrap.query('CREATE SCHEMA IF NOT EXISTS wow3d'); }
+        finally { await bootstrap.end(); }
+        pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl, options: '-c search_path=wow3d', max: 8 });
         await pool.query(`CREATE TABLE IF NOT EXISTS accounts(id SERIAL PRIMARY KEY, username TEXT NOT NULL, ulow TEXT UNIQUE NOT NULL, email TEXT UNIQUE NOT NULL, pass TEXT NOT NULL, created TIMESTAMPTZ DEFAULT now());
           CREATE TABLE IF NOT EXISTS chars(id SERIAL PRIMARY KEY, account_id INT NOT NULL REFERENCES accounts(id), name TEXT NOT NULL, lname TEXT UNIQUE NOT NULL, data JSONB NOT NULL, lvl INT DEFAULT 1, pvp INT DEFAULT 0, updated TIMESTAMPTZ DEFAULT now());
           CREATE INDEX IF NOT EXISTS chars_acc ON chars(account_id);
