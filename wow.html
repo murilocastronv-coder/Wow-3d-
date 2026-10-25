@@ -2128,8 +2128,8 @@ const HD_NPC_PRE=['npc_elric','npc_mira','npc_brant','npc_selene','npc_torvin','
 function begin(sv){
   const c0=sv?sv.cls:GC.S.cls;
   if(begin._w)return;
-  if(window.HDX&&HDX.pending(c0)){begin._w=1;HDX.setHero(c0);HDX.kick(c0);const ov=document.createElement('div');ov.style.cssText='position:fixed;inset:0;z-index:99;display:flex;align-items:center;justify-content:center;background:rgba(10,7,4,.82);color:#e8d9a8;font:700 18px sans-serif;text-align:center';ov.textContent='Carregando seu herói 3D…';document.body.appendChild(ov);
-    HDX.whenReady(c0,15000).then(()=>{ov.remove();begin._w=0;begin(sv)});return}
+  if(window.HDX&&HDX.pending(c0)&&window.__skipHeroWaitFor!==c0){begin._w=1;HDX.setHero(c0);HDX.kick(c0);const ov=document.createElement('div');ov.style.cssText='position:fixed;inset:0;z-index:99;display:flex;align-items:center;justify-content:center;background:rgba(10,7,4,.82);color:#e8d9a8;font:700 18px sans-serif;text-align:center';ov.textContent='Carregando seu herói 3D…';document.body.appendChild(ov);
+    Promise.race([Promise.resolve().then(()=>HDX.whenReady(c0,15000)).catch(()=>false),new Promise(resolve=>setTimeout(()=>resolve(false),16000))]).then(()=>{ov.remove();begin._w=0;if(!HDX.ready(c0))window.__skipHeroWaitFor=c0;begin(sv)});return}
   const name=(sv?sv.name:$('#nameIn').value.trim())||'Aventureiro';
   let cls,race,look;if(sv){cls=sv.cls;race=sv.race;look=sv.look}else{cls=GC.S.cls;race=GC.S.race;look=GC.look()}
   try{AC=AC||new (window.AudioContext||window.webkitAudioContext)()}catch(e){}
