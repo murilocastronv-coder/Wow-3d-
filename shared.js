@@ -30,14 +30,40 @@ const CLASSES = {
   monge: { n: 'Monge', hp: 105, mp: 50, atk: 11, def: 9, spd: 5, rng: 4, crit: .08 },
   demonio: { n: 'Caçador de Demônios', hp: 100, mp: 60, atk: 12, def: 8, spd: 4.8, rng: 4.2, crit: .08 }
 };
+const monster = (name, count, r, lvl, hp, dmg, def, radius = 1.2) => ({ name, count, r, lvl, hp, dmg, def, radius });
+const boss = (name, lvl, hp, dmg, def, radius = 2.8) => ({ name, lvl: [lvl, lvl], hp, dmg, def, radius, boss: true });
+const mapCfg = (id, n, minLvl, maxLvl, mons, bossDef, bossPos = [0, 0], boost = null) => ({
+  id, n, name: n, minLvl, maxLvl, safe: id === 'valoria', bossPos, mons, boss: bossDef, ...(boost ? { boost } : {})
+});
 const MAPS = {
-  valoria: { id: 'valoria', n: 'Valoria', name: 'Valoria', x: 0, z: 0, safe: true, min: 1, max: 10 },
-  forest: { id: 'forest', n: 'Floresta Esmeralda', name: 'Floresta Esmeralda', x: 35, z: 0, min: 1, max: 12 },
-  goblin: { id: 'goblin', n: 'Acampamento Goblin', name: 'Acampamento Goblin', x: 65, z: 15, min: 4, max: 10 },
-  grave: { id: 'grave', n: 'Cemitério Antigo', name: 'Cemitério Antigo', x: 95, z: 0, min: 6, max: 18 },
-  desert: { id: 'desert', n: 'Deserto Escarlate', name: 'Deserto Escarlate', x: 125, z: 0, min: 10, max: 25 },
-  snow: { id: 'snow', n: 'Picos Gelados', name: 'Picos Gelados', x: 155, z: 0, min: 14, max: 30 },
-  swamp: { id: 'swamp', n: 'Pântano Sombrio', name: 'Pântano Sombrio', x: 185, z: 0, min: 18, max: 35 }
+  valoria: mapCfg('valoria', 'Valoria', 1, 10, [
+    monster('Lobo Cinzento', 12, [20, 55], [1, 3], 34, 4, 2),
+    monster('Javali Selvagem', 8, [24, 62], [2, 4], 46, 5, 3)
+  ], boss('Guardião de Valoria', 8, 220, 12, 8), [0, 0]),
+  forest: mapCfg('forest', 'Floresta Esmeralda', 1, 12, [
+    monster('Lobo Cinzento', 15, [18, 65], [1, 5], 40, 5, 3),
+    monster('Javali Selvagem', 10, [25, 72], [3, 6], 58, 7, 4)
+  ], boss('Alfa da Floresta', 10, 320, 15, 10), [0, 0]),
+  goblin: mapCfg('goblin', 'Acampamento Goblin', 4, 10, [
+    monster('Goblin Saqueador', 18, [18, 60], [4, 8], 62, 7, 4),
+    monster('Lobo de Guerra', 6, [35, 72], [5, 9], 78, 9, 5)
+  ], boss('Rei Grumsh', 10, 480, 18, 12), [0, 0]),
+  grave: mapCfg('grave', 'Cemitério Antigo', 6, 18, [
+    monster('Esqueleto Errante', 18, [20, 68], [6, 11], 82, 9, 6),
+    monster('Cavaleiro Sepulcral', 8, [32, 74], [9, 14], 125, 13, 9)
+  ], boss('Lorde dos Ossos', 16, 760, 22, 16), [0, 0]),
+  desert: mapCfg('desert', 'Deserto Escarlate', 10, 25, [
+    monster('Escorpião Escarlate', 16, [20, 70], [10, 16], 105, 12, 7),
+    monster('Múmia do Deserto', 12, [28, 75], [12, 19], 145, 15, 10)
+  ], boss('Faraó Escarlate', 23, 1250, 28, 20), [0, 0]),
+  snow: mapCfg('snow', 'Picos Gelados', 14, 30, [
+    monster('Lobo Gélido', 16, [20, 70], [14, 21], 135, 15, 9),
+    monster('Yeti das Neves', 10, [30, 75], [17, 25], 210, 21, 14)
+  ], boss('Titã Glacial', 28, 2100, 34, 25), [0, 0]),
+  swamp: mapCfg('swamp', 'Pântano Sombrio', 18, 35, [
+    monster('Sapo do Brejo', 14, [20, 70], [18, 26], 175, 19, 12),
+    monster('Bruxa do Brejo', 12, [30, 78], [21, 30], 205, 23, 14)
+  ], boss('Hidra do Pântano', 34, 3200, 42, 32), [0, 0])
 };
 const MAP_ORDER = Object.keys(MAPS);
 const SLOTS = ['arma', 'cabeca', 'peito', 'pernas', 'anel'];
