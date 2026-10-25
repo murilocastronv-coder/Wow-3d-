@@ -1,0 +1,39 @@
+<!doctype html><html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Status</title>
+<style>
+body{margin:0;background:#0d0b12;color:#f2e8cf;font:15px system-ui,sans-serif;display:flex;justify-content:center;padding:20px}
+.w{width:100%;max-width:520px}h1{font:700 22px Georgia,serif;color:#e3bd6c;margin:6px 0 16px}
+input,button{font:inherit;padding:11px 12px;border-radius:10px;border:1px solid #5a4a2a;background:#17131f;color:#fff;width:100%;box-sizing:border-box;margin:5px 0}
+button{background:#e3bd6c;color:#241a05;font-weight:700;cursor:pointer;border:0}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.c{background:#17131f;border:1px solid #4a3d22;border-radius:12px;padding:12px}
+.c b{display:block;font:800 28px Georgia,serif;color:#fff1cf}.c span{font-size:12.5px;color:#bfb49a}
+.on b{color:#7dff9e}table{width:100%;border-collapse:collapse;margin-top:6px}td,th{padding:6px 4px;border-bottom:1px solid #2c2438;text-align:left;font-size:13.5px}
+#err{color:#ff8a80;min-height:20px}small{color:#8d836c}
+</style></head><body><div class="w"><h1>📊 Status</h1>
+<div id="lg"><input id="u" placeholder="Usuário / e-mail" autocomplete="username"><input id="p" type="password" placeholder="Senha" autocomplete="current-password"><button id="go">Entrar</button></div>
+<div id="err"></div>
+<div id="pn" style="display:none">
+<div class="g"><div class="c on"><b id="on">–</b><span>online agora</span></div><div class="c"><b id="pl">–</b><span>jogando (3D)</span></div>
+<div class="c"><b id="d2">–</b><span>no 2D</span></div><div class="c"><b id="d3">–</b><span>no 3D (site)</span></div>
+<div class="c"><b id="pt">–</b><span>pico hoje</span></div><div class="c"><b id="pw">–</b><span>pico da semana (7 dias) <small id="pwd"></small></span></div>
+<div class="c"><b id="pa">–</b><span>recorde geral <small id="pad"></small></span></div><div class="c"><b id="pu">–</b><span>jogaram hoje</span></div>
+<div class="c"><b id="ac">–</b><span>contas</span></div><div class="c"><b id="ch">–</b><span>heróis</span></div></div>
+<b>Pico por dia</b><table id="tb"></table><p><small>Atualiza sozinho a cada 15 s. <a href="#" id="out" style="color:#e3bd6c">sair</a></small></p></div>
+</div><script>
+const $=s=>document.querySelector(s),nf=n=>(n|0).toLocaleString('pt-BR'),fd=d=>d.slice(8)+'/'+d.slice(5,7);
+let tok='';try{tok=sessionStorage.getItem('st_tok')||''}catch(_){}
+async function post(u,b){const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});let j={};try{j=await r.json()}catch(_){}return[r.status,j]}
+async function load(){const[c,j]=await post('/api/adm',{token:tok,a:'stats'});
+ if(c!==200){$('#pn').style.display='none';$('#lg').style.display='';$('#err').textContent=c===403?'Acesso negado.':c===429?'Muitas tentativas, espere 1 minuto.':'Faça login.';tok='';try{sessionStorage.removeItem('st_tok')}catch(_){}return false}
+ $('#lg').style.display='none';$('#pn').style.display='';$('#err').textContent='';
+ const k=j.peak||{};$('#on').textContent=nf((j.online|0)+(j.wow|0));$('#pl').textContent=nf(j.wowPlaying);$('#d2').textContent=nf(j.online);$('#d3').textContent=nf(j.wow);
+ $('#pt').textContent=nf(k.today);$('#pw').textContent=nf(k.week);$('#pwd').textContent=k.weekDay?'('+fd(k.weekDay)+')':'';$('#pa').textContent=nf(k.all);$('#pad').textContent=k.allDay?'('+fd(k.allDay)+')':'';$('#pu').textContent=nf(k.uniq);
+ $('#ac').textContent=nf(j.accounts);$('#ch').textContent=nf(j.characters);
+ $('#tb').innerHTML='<tr><th>Dia</th><th>Pico online</th><th>Jogaram</th></tr>'+(k.days||[]).slice().reverse().map(x=>'<tr><td>'+fd(x[0])+'</td><td>'+nf(x[1])+'</td><td>'+nf(x[2])+'</td></tr>').join('');return true}
+$('#go').onclick=async()=>{$('#err').textContent='';const[c,j]=await post('/api/login',{id:$('#u').value,password:$('#p').value});
+ if(c!==200||!j.token){$('#err').textContent=c===429?'Muitas tentativas, espere 1 minuto.':'Login inválido.';return}
+ tok=j.token;try{sessionStorage.setItem('st_tok',tok)}catch(_){}$('#p').value='';load()};
+$('#p').onkeydown=e=>{if(e.key==='Enter')$('#go').click()};
+$('#out').onclick=e=>{e.preventDefault();tok='';try{sessionStorage.removeItem('st_tok')}catch(_){}location.reload()};
+if(tok)load();setInterval(()=>{if(tok)load()},15000);
+</script></body></html>
