@@ -636,9 +636,6 @@ const server = http.createServer(async (req, res) => {
     fs.createReadStream(file).on('error', () => res.destroy()).pipe(res);
   } catch (e) { console.error(e); if (!res.headersSent) sendJson(res, 500, { error: 'server' }); else res.end(); }
 });
-// Render's edge reuses HTTP connections; longer keep-alive avoids intermittent 502s.
-server.keepAliveTimeout = 120000;
-server.headersTimeout = 125000;
 
 /* =============================== WEBSOCKET (RFC 6455) =============================== */
 class WS {

@@ -2128,8 +2128,8 @@ const HD_NPC_PRE=['npc_elric','npc_mira','npc_brant','npc_selene','npc_torvin','
 function begin(sv){
   const c0=sv?sv.cls:GC.S.cls;
   if(begin._w)return;
-  if(window.HDX&&HDX.pending(c0)&&window.__skipHeroWaitFor!==c0){begin._w=1;HDX.setHero(c0);HDX.kick(c0);const ov=document.createElement('div');ov.style.cssText='position:fixed;inset:0;z-index:99;display:flex;align-items:center;justify-content:center;background:rgba(10,7,4,.82);color:#e8d9a8;font:700 18px sans-serif;text-align:center';ov.textContent='Carregando seu herói 3D…';document.body.appendChild(ov);
-    Promise.race([Promise.resolve().then(()=>HDX.whenReady(c0,15000)).catch(()=>false),new Promise(resolve=>setTimeout(()=>resolve(false),16000))]).then(()=>{ov.remove();begin._w=0;if(!HDX.ready(c0))window.__skipHeroWaitFor=c0;begin(sv)});return}
+  if(window.HDX&&HDX.pending(c0)){begin._w=1;HDX.setHero(c0);HDX.kick(c0);const ov=document.createElement('div');ov.style.cssText='position:fixed;inset:0;z-index:99;display:flex;align-items:center;justify-content:center;background:rgba(10,7,4,.82);color:#e8d9a8;font:700 18px sans-serif;text-align:center';ov.textContent='Carregando seu herói 3D…';document.body.appendChild(ov);
+    HDX.whenReady(c0,15000).then(()=>{ov.remove();begin._w=0;begin(sv)});return}
   const name=(sv?sv.name:$('#nameIn').value.trim())||'Aventureiro';
   let cls,race,look;if(sv){cls=sv.cls;race=sv.race;look=sv.look}else{cls=GC.S.cls;race=GC.S.race;look=GC.look()}
   try{AC=AC||new (window.AudioContext||window.webkitAudioContext)()}catch(e){}
@@ -2187,10 +2187,10 @@ Music.play('title');
 
 /* ---------- conta online (mesmas contas e personagens do Eternal Realms) ---------- */
 let ONL=null;
-const apiw=async(p,b)=>{const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),12000);try{const r=await fetch('/api/'+p,{method:b?'POST':'GET',headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined,signal:ctl.signal});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||('http '+r.status));return j}catch(e){if(e.name==='AbortError')throw new Error('timeout');throw e}finally{clearTimeout(timer)}};
+const apiw=async(p,b)=>{const r=await fetch('/api/'+p,{method:b?'POST':'GET',headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||('http '+r.status));return j};
 const CN=new Proxy({},{get:(_,k)=>CLS[k]?CLS[k].n:k});
 const ERR={badLogin:'Usuário ou senha incorretos.',userTaken:'Esse usuário já existe.',emailTaken:'Esse e-mail já tem conta.',err_user:'Usuário: 3 a 16 letras, números ou _.',err_email:'E-mail inválido.',err_pw:'Senha: mínimo 6 caracteres.',rate:'Muitas tentativas. Aguarde um minuto.',auth:'Sessão expirada. Entre de novo.',badReset:'Link inválido ou expirado. Peça outro.'};
-const emsg=e=>e.message==='timeout'?'O servidor demorou para responder. Recarregue a página e tente novamente.':ERR[e.message]||('Não consegui conectar ('+e.message+').');
+const emsg=e=>ERR[e.message]||('Não consegui conectar ('+e.message+'). A conta só funciona em muonlineclaude.com.');
 const tk={get(){try{return localStorage.getItem('vd-token')}catch(_){return null}},set(v){try{v?localStorage.setItem('vd-token',v):localStorage.removeItem('vd-token')}catch(_){}}};
 function tab(n){for(const b of $$('#tabs button'))b.classList.toggle('on',b.dataset.tab===n);$('#pIn').style.display=n==='in'?'':'none';$('#pReg').style.display=n==='reg'?'':'none';$('#pGuest').style.display=n==='guest'?'':'none'}
 $('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)tab(b.dataset.tab)});
