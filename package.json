@@ -1,0 +1,17 @@
+{
+  "name": "wow-3d-eternal-realms",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Reinos de Valdor / Eternal Realms multiplayer 3D RPG server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check shared.js && node --check wow.js && node --check wowdata.js && node --check wowshop.js && node --check wowrt.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "pg": "^8.16.3"
+  }
+}
