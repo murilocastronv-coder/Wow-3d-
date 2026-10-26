@@ -1156,7 +1156,7 @@ const VS=`attribute vec3 aP;attribute vec3 aN;attribute vec3 aC;uniform mat4 uVP
 varying vec3 vN;varying vec3 vC;varying float vD;varying vec3 vW;
 void main(){vec4 w=uM*vec4(aP,1.0);gl_Position=uVP*w;vN=mat3(uM)*aN;vC=aC;vW=w.xyz;vD=length(w.xyz-uCam);}`;
 const FS=`precision mediump float;varying vec3 vN;varying vec3 vC;varying float vD;varying vec3 vW;
-uniform vec3 uTint;uniform vec3 uEmis;uniform float uAlpha;uniform float uUnlit;uniform float uWater;uniform float uTime;
+uniform vec3 uCam;uniform vec3 uTint;uniform vec3 uEmis;uniform float uAlpha;uniform float uUnlit;uniform float uWater;uniform float uTime;
 uniform vec3 uSunDir;uniform vec3 uSunCol;uniform vec3 uAmbS;uniform vec3 uAmbG;uniform vec3 uFogCol;uniform float uFogN;uniform float uFogF;
 void main(){vec3 n=normalize(vN);vec3 c=max(vC*uTint,vec3(0.0));vec3 lit;
  if(uUnlit>.5){lit=c;}else{
