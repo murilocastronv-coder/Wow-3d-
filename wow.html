@@ -298,6 +298,47 @@ canvas#gl{position:absolute;inset:0;width:100%;height:100%;display:block;outline
   #camZoom{top:34%}
 }
 
+
+/* HUD v4: distribute mobile controls into safe, non-overlapping zones */
+@media (max-width:900px),(pointer:coarse){
+  #app{overflow:hidden}
+  /* Keep skill bar centered and clear of the system navigation edge */
+  #ab{left:100px;right:100px;bottom:calc(4px + env(safe-area-inset-bottom));width:auto;max-width:none;transform:none;z-index:12}
+  #xpb{width:100%}
+  #slots{width:100%;overflow-x:auto;justify-content:flex-start;scrollbar-width:none}
+  #slots::-webkit-scrollbar{display:none}
+  /* Menu buttons move to a separate row above the skill bar */
+  #mn{left:50%;right:auto;bottom:calc(53px + env(safe-area-inset-bottom));width:min(66vw,500px);transform:translateX(-50%);display:flex;flex-wrap:nowrap;justify-content:center;gap:3px;z-index:15}
+  #mn .mb{flex:1 1 0;min-width:0;max-width:44px;height:34px;font-size:16px}
+  /* Joystick stays bottom-left; combat controls bottom-right */
+  #joy{left:8px;bottom:calc(8px + env(safe-area-inset-bottom));width:86px;height:86px;z-index:16}
+  #joy i{left:25px;top:25px;width:32px;height:32px}
+  #tb{right:calc(10px + env(safe-area-inset-right));left:auto;bottom:calc(8px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:4px;z-index:16}
+  #tb .mb{width:38px;height:38px;font-size:18px}
+  #camZoom{right:calc(10px + env(safe-area-inset-right));top:38%;bottom:auto;z-index:40}
+}
+@media (max-width:900px) and (orientation:landscape){
+  /* In landscape, leave both side lanes for joystick/combat and use a compact center stack */
+  #ab{left:100px;right:100px;bottom:calc(3px + env(safe-area-inset-bottom));width:auto;max-width:none;transform:none}
+  #slots{gap:2px;padding:2px;max-height:36px}
+  .sl{flex:0 0 30px;width:30px;height:30px;font-size:15px}
+  #xpb{height:4px}
+  #mn{left:50%;right:auto;bottom:calc(38px + env(safe-area-inset-bottom));width:min(58vw,440px);transform:translateX(-50%);gap:2px}
+  #mn .mb{height:28px;max-width:38px;font-size:13px}
+  #joy{left:8px;bottom:calc(8px + env(safe-area-inset-bottom));width:76px;height:76px}
+  #joy i{left:22px;top:22px;width:28px;height:28px}
+  #tb{right:calc(8px + env(safe-area-inset-right));bottom:calc(8px + env(safe-area-inset-bottom));flex-direction:column;gap:3px}
+  #tb .mb{width:34px;height:34px;font-size:17px}
+  #camZoom{right:calc(8px + env(safe-area-inset-right));top:35%;gap:4px}
+  #camZoom button{width:36px;height:36px}
+}
+@media (max-height:420px) and (orientation:landscape){
+  #pf{top:4px;left:4px;width:142px;padding:5px}
+  #mm{top:4px;right:calc(48px + env(safe-area-inset-right))}
+  #mn{bottom:calc(36px + env(safe-area-inset-bottom))}
+  #ab{bottom:calc(2px + env(safe-area-inset-bottom))}
+}
+
 </style>
 </head><body>
 
