@@ -197,10 +197,31 @@ canvas#gl{position:absolute;inset:0;width:100%;height:100%;display:block;outline
 #langPop{display:none;position:absolute;right:10px;bottom:62px;z-index:40;flex-direction:column;gap:5px;padding:8px;background:var(--panel);border:2px solid var(--line);border-radius:6px}#langBtn{font:800 12px var(--disp)}
 .flags{display:flex;gap:8px;margin:0 0 14px;flex-wrap:wrap}.flags button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 9px;border:2px solid #3a2f1e;border-radius:9px;background:#120d09;color:var(--mute);font:800 11px var(--disp);letter-spacing:.03em;cursor:pointer;transition:transform .12s,border-color .12s}.flags button svg{width:44px;height:30px;border-radius:4px;box-shadow:0 0 0 1px rgba(0,0,0,.6),0 2px 6px rgba(0,0,0,.5)}.flags button:hover{border-color:var(--gold)}.flags button.on{border-color:var(--gold);background:#2a1f12;color:var(--gold2);transform:translateY(-2px);box-shadow:0 0 14px rgba(211,169,74,.35)}@media (max-width:420px){.flags{gap:6px}.flags button{padding:6px 7px}.flags button svg{width:38px;height:26px}}
 @media (max-width:760px){#langPop{bottom:112px}}
+
+/* PATCH mobile HUD: safe area, non-clipped hotbar, camera zoom controls */
+@media (max-width:760px),(pointer:coarse){
+  #app{padding:0}
+  #ab{left:8px;right:8px;bottom:calc(6px + env(safe-area-inset-bottom));width:auto;max-width:none;transform:none;align-items:stretch;gap:4px}
+  #xpb{width:100%;max-width:none}
+  #cast{max-width:70vw}
+  #slots{width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;justify-content:flex-start;gap:4px;padding:4px 2px 6px;scrollbar-width:none;touch-action:pan-x}
+  #slots::-webkit-scrollbar{display:none}
+  .sl{flex:0 0 42px;width:42px;height:42px;font-size:21px}
+  #mn{left:8px;right:8px;bottom:calc(62px + env(safe-area-inset-bottom));gap:4px;justify-content:center;flex-wrap:nowrap}
+  #mn .mb{flex:1 1 0;min-width:0;max-width:52px;width:auto;height:42px;padding:0;font-size:18px}
+  #joy{left:16px;bottom:calc(94px + env(safe-area-inset-bottom));width:112px;height:112px}
+  #joy i{left:34px;top:34px;width:40px;height:40px}
+  #tb{right:8px;bottom:calc(130px + env(safe-area-inset-bottom))}
+  #camZoom{position:absolute;z-index:12;right:10px;bottom:calc(225px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;pointer-events:auto}
+  #camZoom button{width:44px;height:44px;border:2px solid var(--line);border-radius:8px;background:linear-gradient(#2d2217,#16100b);color:var(--ink);font:800 25px var(--body);box-shadow:0 2px 6px #0008;touch-action:manipulation}
+}
+#camZoom{display:none}
+
 </style>
 </head><body>
 
 <div id="app">
+  <div id="camZoom" aria-label="Zoom da câmera"><button id="zoomIn" type="button" aria-label="Aproximar personagem">+</button><button id="zoomOut" type="button" aria-label="Afastar personagem">−</button></div>
   <canvas id="gl" tabindex="0"></canvas>
   <div id="nps"></div>
 
@@ -2950,6 +2971,26 @@ setInterval(()=>{if(started)save()},12000);
 function loop(ts){const t=ts/1000,dt=Math.min(.05,t-last||.016);last=t;try{if(!started)tickPreview();update(dt);updSrvMobs(dt);updRemote(dt);render()}catch(e){console.error(e);}requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
 window.__vd={toggleMount,mountModel,HD,get EVN(){return EVN},PVP,pvpOK,hit,isFoe,OPT,addItem,genItem,makeRoom,autoEqAll,DROPS,INV_MAX,autoSkill,ABIL,HDST:()=>HD.st,HDSTC:c=>HD.slot(c).st,SM,RP,netSend,get PARTY(){return PARTY},get TR(){return TR},get INST(){return INST},get GUILDN(){return GUILDN},get ROSTER(){return ROSTER},get MYID(){return MYID},get ws3ok(){return ws3ok},INVS,slash,TEL,attackBtn,nearestFoe,get P(){return P},ENT,begin,tryUse,interact,clickPick,tabTarget,giveXp,genItem,addItem,openShop,toggleWin,refreshWins,QUESTS,hit,hurt,killMob,heightAt,get cam(){return{camYaw,camPitch,camDist}},set cam(v){camYaw=v.camYaw??camYaw;camPitch=v.camPitch??camPitch;camDist=v.camDist??camDist},set hour(h){gameHour=h},mkMob};
+})();
+
+
+/* Camera zoom controls for touch screens; pinch with two fingers also works. */
+(function(){
+  const z=document.getElementById('camZoom'), plus=document.getElementById('zoomIn'), minus=document.getElementById('zoomOut');
+  if(!z||!plus||!minus)return;
+  const touch=matchMedia('(pointer:coarse)').matches||innerWidth<=760;
+  if(touch)z.style.display='flex';
+  function zoom(delta){camDist=clamp(camDist+delta,4,26);}
+  plus.addEventListener('click',e=>{e.preventDefault();zoom(-1.5)});
+  minus.addEventListener('click',e=>{e.preventDefault();zoom(1.5)});
+  let pinchStart=0,pinchDist=0;
+  const canvas=document.getElementById('gl');
+  if(canvas){
+    canvas.addEventListener('touchstart',e=>{if(e.touches.length===2){pinchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);pinchStart=camDist;}},{passive:true});
+    canvas.addEventListener('touchmove',e=>{if(e.touches.length===2&&pinchDist>0){e.preventDefault();const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);camDist=clamp(pinchStart-(d-pinchDist)*0.025,4,26);}},{passive:false});
+    canvas.addEventListener('touchend',e=>{if(e.touches.length<2){pinchDist=0;pinchStart=0;}},{passive:true});
+  }
+  window.addEventListener('resize',()=>{z.style.display=(matchMedia('(pointer:coarse)').matches||innerWidth<=760)?'flex':'none'});
 })();
 
 startI18n();setLang(LANG);window.__i18n={TXT,tr:(s,l)=>I18N.tr(s,l)};
