@@ -339,6 +339,23 @@ canvas#gl{position:absolute;inset:0;width:100%;height:100%;display:block;outline
   #ab{bottom:calc(2px + env(safe-area-inset-bottom))}
 }
 
+
+/* ===== página inicial mais atraente ===== */
+#title{isolation:isolate}
+#title::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-2;background:url("data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%201200%20320%27%20preserveAspectRatio=%27xMidYMax%20slice%27%3E%3Cpath%20fill=%27%2317302f%27%20opacity=%27.75%27%20d=%27M0%20320V170L120%20100%20250%20165%20390%2080%20560%20175%20700%20110%20860%20180%201010%2095%201200%20165V320Z%27/%3E%3Cpath%20fill=%27%230f2420%27%20d=%27M0%20320V225L100%20195%20190%20232%20310%20188%20430%20238%20560%20196%20700%20244%20860%20200%201000%20242%201120%20205%201200%20232V320Z%27/%3E%3Cpath%20fill=%27%2308140f%27%20d=%27M-1%20224l29%2076h-58zM44%20228l27%2072h-55zM71%20222l30%2078h-59zM100%20226l28%2074h-56zM144%20212l33%2088h-67zM168%20236l24%2064h-49zM204%20211l34%2089h-67zM251%20249l19%2051h-39zM292%20204l37%2096h-73zM321%20221l30%2079h-60zM346%20250l19%2050h-38zM389%20248l20%2052h-39zM417%20239l23%2061h-46zM449%20228l27%2072h-55zM493%20210l34%2090h-69zM530%20220l31%2080h-61zM565%20219l31%2081h-62zM599%20237l24%2063h-48zM645%20202l37%2098h-74zM677%20216l32%2084h-64zM702%20240l23%2060h-46zM737%20248l20%2052h-40zM782%20231l26%2069h-52zM819%20232l26%2068h-52zM856%20209l34%2091h-69zM872%20241l23%2059h-45zM926%20228l27%2072h-55zM963%20232l26%2068h-52zM980%20220l30%2080h-61zM1029%20238l24%2062h-47zM1051%20235l25%2065h-50zM1103%20214l33%2086h-65zM1122%20239l23%2061h-46zM1157%20248l20%2052h-39z%27/%3E%3Cpath%20fill=%27%23050c09%27%20d=%27M6%20242l30%2078h-60zM47%20224l37%2096h-73zM86%20205l44%20115h-88zM131%20211l42%20109h-83zM177%20226l36%2094h-72zM225%20236l32%2084h-64zM286%20200l46%20120h-91zM319%20195l48%20125h-95zM363%20227l35%2093h-70zM422%20211l41%20109h-83zM454%20188l50%20132h-101zM502%20236l32%2084h-64zM559%20232l34%2088h-67zM596%20249l27%2071h-54zM638%20215l40%20105h-80zM687%20214l40%20106h-81zM736%20223l37%2097h-73zM794%20221l37%2099h-75zM832%20196l47%20124h-94zM871%20243l29%2077h-58zM931%20199l46%20121h-92zM964%20241l30%2079h-60zM1020%20191l49%20129h-98zM1055%20190l49%20130h-99zM1115%20213l41%20107h-81zM1152%20247l28%2073h-56z%27/%3E%3C/svg%3E") bottom center/cover no-repeat,radial-gradient(circle at 80% 16%,rgba(255,238,185,.95) 0 1.8%,rgba(255,214,120,.28) 3.2%,transparent 10%),linear-gradient(180deg,#0a1626 0%,#14282f 36%,#2b3a2c 64%,#0b0907 100%)}
+#title::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:.6;background-image:radial-gradient(circle,rgba(255,206,100,.95) 0 1.4px,transparent 2.6px),radial-gradient(circle,rgba(255,160,60,.75) 0 1px,transparent 2.2px);background-size:170px 230px,260px 310px;background-position:0 0,60px 90px;animation:emb 16s linear infinite}
+@keyframes emb{to{background-position:34px -460px,-44px -620px}}
+#title .tw{position:relative}
+#title .pill{display:inline-block;margin:6px 0 4px;padding:5px 12px;border-radius:99px;font:700 13px var(--body);color:#2a1a05;background:linear-gradient(90deg,#f1d78f,#d3a94a);box-shadow:0 0 18px rgba(211,169,74,.45)}
+#title h1{background:linear-gradient(180deg,#fff6cf 8%,#e8b94f 52%,#a2701c 100%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;filter:drop-shadow(0 3px 0 #000) drop-shadow(0 0 22px rgba(211,169,74,.4))}
+#title .card{background:linear-gradient(180deg,rgba(37,29,21,.94),rgba(20,15,10,.94));box-shadow:0 0 0 1px #000,0 14px 44px rgba(0,0,0,.65),0 0 42px rgba(211,169,74,.14),inset 0 0 0 1px rgba(241,215,143,.14)}
+#title .feat span{background:rgba(22,16,10,.82);border-color:#5a4524;transition:transform .15s,border-color .15s}#title .feat span:hover{transform:translateY(-2px);border-color:var(--gold)}
+#title .news{margin:14px 0 4px;text-align:left}
+#title .news h3{margin:0 0 8px;font:800 17px var(--disp);color:var(--gold2);letter-spacing:.03em}
+#title .ng{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#title .ng div{padding:10px 11px;border:1px solid #4a3a1f;border-radius:8px;background:linear-gradient(160deg,rgba(40,30,18,.85),rgba(14,10,6,.85));box-shadow:inset 0 0 0 1px rgba(241,215,143,.06)}
+#title .ng b{display:block;color:var(--gold2);font:700 14px var(--disp)}#title .ng small{display:block;color:#b9ab8e;font-size:12.5px;line-height:1.38;margin-top:3px}
+@media (max-width:860px){#title .ng{grid-template-columns:1fr}#title .pill{font-size:12px}}
 </style>
 </head><body>
 
@@ -409,14 +426,23 @@ canvas#gl{position:absolute;inset:0;width:100%;height:100%;display:block;outline
   <div id="title"><div class="tw">
     <div class="hero">
       <div class="flags" id="lbar"><button type="button" data-lang="pt" title="Português" aria-label="Português"><svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#009b3a"/><path d="M15 2 27.5 10 15 18 2.5 10z" fill="#fedf00"/><circle cx="15" cy="10" r="4.3" fill="#002776"/><path d="M10.9 9.1c3.1-1 6.4-.5 8.4 1.4" stroke="#fff" stroke-width=".8" fill="none"/></svg><span>Português</span></button><button type="button" data-lang="en" title="English" aria-label="English"><svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#fff"/><rect y="0.00" width="30" height="1.54" fill="#b22234"/><rect y="3.08" width="30" height="1.54" fill="#b22234"/><rect y="6.15" width="30" height="1.54" fill="#b22234"/><rect y="9.23" width="30" height="1.54" fill="#b22234"/><rect y="12.31" width="30" height="1.54" fill="#b22234"/><rect y="15.38" width="30" height="1.54" fill="#b22234"/><rect y="18.46" width="30" height="1.54" fill="#b22234"/><rect width="12.5" height="10.77" fill="#3c3b6e"/></svg><span>English</span></button><button type="button" data-lang="es" title="Español" aria-label="Español"><svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#aa151b"/><rect y="5" width="30" height="10" fill="#f1bf00"/></svg><span>Español</span></button><button type="button" data-lang="fr" title="Français" aria-label="Français"><svg viewBox="0 0 30 20"><rect width="10" height="20" fill="#0055a4"/><rect x="10" width="10" height="20" fill="#fff"/><rect x="20" width="10" height="20" fill="#ef4135"/></svg><span>Français</span></button></div><div class="logo">⚔️</div>
+      <div class="pill">⚡ Novo: heróis mais realistas, zoom e farm automático</div>
       <h1>Reinos de Valdor</h1>
       <div class="sub">Um RPG 3D de mundo aberto no navegador. Evolua do nível 1 ao <b>2000</b> com XP no estilo World of Warcraft, equipe itens por raridade e cavalgue sua montaria.</div>
       <div class="msg" id="payNote" style="display:none;margin:0 0 10px"></div>
       <div class="live" id="live"><span><b id="stAcc">—</b> contas</span><i>·</i><span><b id="stCh">—</b> heróis</span></div>
-      <div class="feat"><span>🌍 Mundo 3D</span><span>📈 Nível 1–2000</span><span>⚔️ 12 classes</span><span>🧝 11 raças</span><span>👥 Grupo e guilda</span><span>🏰 Masmorra</span><span>📜 Missões</span><span>🎒 Loot raro</span><span>🐴 Montaria</span><span>🌗 Dia e noite</span><span>📱 Celular e PC</span></div>
+      <div class="feat"><span>🌍 Mundo 3D</span><span>📈 Nível 1–2000</span><span>⚔️ 12 classes</span><span>🧝 11 raças</span><span>👥 Grupo e guilda</span><span>🏰 Masmorra</span><span>📜 Missões</span><span>🎒 Loot raro</span><span>🐴 Montaria</span><span>🌗 Dia e noite</span><span>📱 Celular e PC</span><span>🧪 Poção automática</span><span>🔍 Zoom da câmera</span><span>🧍 Heróis 3D realistas</span></div>
       <a class="dc" href="https://discord.gg/bSEx5JYUF7" target="_blank" rel="noopener">💬 Entre no nosso Discord</a>
       <div class="how"><div><b>💻 No PC</b><small>W A S D andar · mouse gira a câmera · roda dá zoom · Tab escolhe alvo · 1–6 poderes · E interagir · C B L H janelas</small></div>
       <div><b>📱 No celular</b><small>Joystick para andar · arraste a tela para girar a câmera · toque no monstro · botões 🎯 ✋ ⚔️ e poderes na barra</small></div></div>
+      <div class="news"><h3>✨ Novidades e recursos</h3><div class="ng">
+        <div><b>🔍 Zoom da câmera</b><small>Botões + − e 👤 na tela, pinça com dois dedos ou roda do mouse. Chegue bem perto do herói ou veja o mundo de longe.</small></div>
+        <div><b>🧪 Ajudante de farm</b><small>Em Configurações ⚙️, ligue a poção automática e escolha a partir de qual porcentagem de vida ela é usada.</small></div>
+        <div><b>📈 XP mais difícil</b><small>Cada nível exige mais abates que o anterior, até o nível máximo 2000. Cada subida é uma conquista.</small></div>
+        <div><b>🧍 Heróis 3D realistas</b><small>Corpos arredondados, cabeça com queixo e orelhas, luz do sol com brilho e névoa mais natural.</small></div>
+        <div><b>🎒 Mochila inteligente</b><small>Equipa sozinho o melhor item e, com a mochila cheia, vende ou larga o que não melhora seu herói.</small></div>
+        <div><b>⚔️ Ataque automático</b><small>Botão AUTO: o herói escolhe o monstro mais próximo, persegue e ataca por você.</small></div>
+      </div></div>
     </div>
     <div class="card box">
       <div class="tabs" id="tabs"><button class="on" data-tab="in">Entrar</button><button data-tab="reg">Criar conta</button><button data-tab="guest">Visitante</button></div>
@@ -579,6 +605,21 @@ const I18N_D=[
 ['Entre no nosso Discord','Join our Discord','Únete a nuestro Discord','Rejoins notre Discord'],['online agora','online now','en línea ahora','en ligne maintenant'],['contas','accounts','cuentas','comptes'],['heróis','heroes','héroes','héros'],
 ['🌍 Mundo 3D','🌍 3D world','🌍 Mundo 3D','🌍 Monde 3D'],['📈 Nível 1–1000','📈 Level 1–1000','📈 Nivel 1–1000','📈 Niveau 1–1000'],['⚔️ 3 classes','⚔️ 3 classes','⚔️ 3 clases','⚔️ 3 classes'],['📜 Missões','📜 Quests','📜 Misiones','📜 Quêtes'],['🎒 Loot raro','🎒 Rare loot','🎒 Botín raro','🎒 Butin rare'],['🐴 Montaria','🐴 Mounts','🐴 Montura','🐴 Monture'],['🌗 Dia e noite','🌗 Day and night','🌗 Día y noche','🌗 Jour et nuit'],['📱 Celular e PC','📱 Mobile and PC','📱 Móvil y PC','📱 Mobile et PC'],
 ['💻 No PC','💻 On PC','💻 En PC','💻 Sur PC'],['W A S D andar · mouse gira a câmera · roda dá zoom · Tab escolhe alvo · 1–6 poderes · E interagir · C B L H janelas','W A S D move · mouse rotates the camera · wheel zooms · Tab picks a target · 1–6 abilities · E interact · C B L H windows','W A S D moverse · el ratón gira la cámara · la rueda hace zoom · Tab elige objetivo · 1–6 poderes · E interactuar · C B L H ventanas','W A S D se déplacer · la souris tourne la caméra · la molette zoome · Tab choisit une cible · 1–6 pouvoirs · E interagir · C B L H fenêtres'],
+['⚡ Novo: heróis mais realistas, zoom e farm automático','⚡ New: more realistic heroes, zoom and auto-farm','⚡ Nuevo: héroes más realistas, zoom y farmeo automático','⚡ Nouveau : héros plus réalistes, zoom et farm automatique'],
+['🧪 Poção automática','🧪 Auto potion','🧪 Poción automática','🧪 Potion automatique'],
+['🔍 Zoom da câmera','🔍 Camera zoom','🔍 Zoom de cámara','🔍 Zoom de la caméra'],
+['🧍 Heróis 3D realistas','🧍 Realistic 3D heroes','🧍 Héroes 3D realistas','🧍 Héros 3D réalistes'],
+['✨ Novidades e recursos','✨ What\'s new and features','✨ Novedades y funciones','✨ Nouveautés et fonctions'],
+['Botões + − e 👤 na tela, pinça com dois dedos ou roda do mouse. Chegue bem perto do herói ou veja o mundo de longe.','+ − and 👤 buttons on screen, two-finger pinch or mouse wheel. Get right up close to your hero or see the world from afar.','Botones + − y 👤 en pantalla, pellizco con dos dedos o rueda del ratón. Acércate a tu héroe o mira el mundo desde lejos.','Boutons + − et 👤 à l\'écran, pincement à deux doigts ou molette. Approchez-vous de votre héros ou voyez le monde de loin.'],
+['🧪 Ajudante de farm','🧪 Farm helper','🧪 Ayudante de farmeo','🧪 Aide au farm'],
+['Em Configurações ⚙️, ligue a poção automática e escolha a partir de qual porcentagem de vida ela é usada.','In Settings ⚙️, turn on the auto potion and choose the health percentage it triggers at.','En Ajustes ⚙️, activa la poción automática y elige a partir de qué porcentaje de vida se usa.','Dans Paramètres ⚙️, activez la potion automatique et choisissez à partir de quel pourcentage de vie elle se déclenche.'],
+['📈 XP mais difícil','📈 Harder XP','📈 XP más difícil','📈 XP plus difficile'],
+['Cada nível exige mais abates que o anterior, até o nível máximo 2000. Cada subida é uma conquista.','Each level needs more kills than the last, up to the max level of 2000. Every level-up is an achievement.','Cada nivel exige más bajas que el anterior, hasta el nivel máximo 2000. Cada subida es un logro.','Chaque niveau demande plus de victimes que le précédent, jusqu\'au niveau max 2000. Chaque niveau est un exploit.'],
+['Corpos arredondados, cabeça com queixo e orelhas, luz do sol com brilho e névoa mais natural.','Rounded bodies, heads with chins and ears, sunlight with shine and more natural fog.','Cuerpos redondeados, cabeza con mentón y orejas, luz del sol con brillo y niebla más natural.','Corps arrondis, tête avec menton et oreilles, lumière du soleil brillante et brume plus naturelle.'],
+['🎒 Mochila inteligente','🎒 Smart backpack','🎒 Mochila inteligente','🎒 Sac intelligent'],
+['Equipa sozinho o melhor item e, com a mochila cheia, vende ou larga o que não melhora seu herói.','Equips the best item for you and, when the bag is full, sells or drops what doesn\'t improve your hero.','Equipa solo el mejor objeto y, con la mochila llena, vende o suelta lo que no mejora a tu héroe.','Équipe seul le meilleur objet et, sac plein, vend ou lâche ce qui n\'améliore pas votre héros.'],
+['⚔️ Ataque automático','⚔️ Auto attack','⚔️ Ataque automático','⚔️ Attaque automatique'],
+['Botão AUTO: o herói escolhe o monstro mais próximo, persegue e ataca por você.','AUTO button: your hero picks the nearest monster, chases and attacks for you.','Botón AUTO: el héroe elige al monstruo más cercano, lo persigue y ataca por ti.','Bouton AUTO : le héros choisit le monstre le plus proche, le poursuit et attaque pour vous.'],
 ['📱 No celular','📱 On mobile','📱 En el móvil','📱 Sur mobile'],['Joystick para andar · arraste a tela para girar a câmera · toque no monstro · botões 🎯 ✋ ⚔️ e poderes na barra','Joystick to move · drag the screen to rotate the camera · tap a monster · 🎯 ✋ ⚔️ buttons and abilities on the bar','Joystick para moverte · arrastra la pantalla para girar la cámara · toca al monstruo · botones 🎯 ✋ ⚔️ y poderes en la barra','Joystick pour avancer · glissez l\'écran pour tourner la caméra · touchez le monstre · boutons 🎯 ✋ ⚔️ et pouvoirs dans la barre'],
 ['Entrar','Log in','Entrar','Se connecter'],['Criar conta','Create account','Crear cuenta','Créer un compte'],['Visitante','Guest','Invitado','Invité'],
 ['Entre com sua conta do Eternal Realms. Seus personagens antigos viram heróis 3D automaticamente, sem perder nada.','Log in with your Eternal Realms account. Your old characters automatically become 3D heroes, losing nothing.','Entra con tu cuenta de Eternal Realms. Tus personajes antiguos se convierten en héroes 3D automáticamente, sin perder nada.','Connectez-vous avec votre compte Eternal Realms. Vos anciens personnages deviennent automatiquement des héros 3D, sans rien perdre.'],
@@ -2153,6 +2194,8 @@ function update(dt){
       if(ooc&&rb('reg'))P.hp=Math.min(maxHp(),P.hp+maxHp()*.02*rb('reg')*dt);
       const hot=P.buf.hot;if(hot&&t>=hot.next){hot.next+=hot.iv;const n=Math.round(maxHp()*hot.f);P.hp=Math.min(maxHp(),P.hp+n);ftext(P.x,P.y+2.8,P.z,'+'+n,'#6bff7b');if(--hot.n<=0)P.buf.hot=null}}
     if(P.potCd>0)P.potCd-=dt;
+    // ajudante de farm: poção automática abaixo de X% da vida
+    if(OPT.pot&&!P.dead&&P.potCd<=0&&P.hp>0&&P.hp<maxHp()*((OPT.potPct||40)/100)&&countItem('pot')>0)usePot();
     animate(P,dt,P.mv);if(P.swing>0)P.swing-=0;
     updMobs(dt);updBots(dt);
     for(const e of ENT){if(e.k!=='mob')animate(e,dt,e.mv||0);else animate(e,dt,e.mv||0)}
@@ -2359,6 +2402,16 @@ function bagSelMark(){if(!P)return;for(const it of[...BSEL])if(P.inv.indexOf(it)
   const sync=()=>{for(const k of['eq','sell','drop'])$('#o_'+k).checked=!!OPT[k]};sync();
   box.addEventListener('change',e=>{const k=e.target.closest('[data-o]').dataset.o;OPT[k]=e.target.checked?1:0;
     if(OPT[k]&&k==='sell')OPT.drop=0;if(OPT[k]&&k==='drop')OPT.sell=0;sync();saveOpt();if(k==='eq')autoEqAll()})})();
+/* ajudante de farm: usar poção sozinho abaixo de X% de vida */
+(function(){const box=document.createElement('div');box.className='opts';
+  const bs='width:36px;height:36px;border:2px solid var(--line);border-radius:8px;background:linear-gradient(#2d2217,#16100b);color:var(--ink);font:800 22px var(--body);cursor:pointer;touch-action:manipulation';
+  box.innerHTML='<h5>Ajudante de farm</h5><label class="opt" data-o="pot"><input type="checkbox" id="o_pot"><span class="ic2">🧪</span><span><b>Usar poção sozinho</b><small>Bebe uma poção quando a vida ficar abaixo da porcentagem escolhida (precisa ter poções na mochila)</small></span></label>'
+   +'<div class="opt" style="cursor:default;justify-content:space-between"><span><b>Vida abaixo de</b></span><span style="display:flex;gap:8px;align-items:center"><button type="button" id="potMinus" style="'+bs+'">−</button><b id="potPctT" style="min-width:48px;text-align:center;font-size:16px"></b><button type="button" id="potPlus" style="'+bs+'">+</button></span></div>';
+  $('#sPanel').appendChild(box);
+  const sync=()=>{if(!(OPT.potPct>=5))OPT.potPct=40;$('#o_pot').checked=!!OPT.pot;$('#potPctT').textContent=OPT.potPct+'%'};sync();
+  box.addEventListener('change',e=>{if(e.target.id==='o_pot'){OPT.pot=e.target.checked?1:0;sync();saveOpt()}});
+  const step=d=>{OPT.potPct=Math.max(5,Math.min(95,(OPT.potPct||40)+d));sync();saveOpt()};
+  $('#potMinus').addEventListener('click',()=>step(-5));$('#potPlus').addEventListener('click',()=>step(5))})();
 (function(){const bt=$('#sbtn'),pn=$('#sPanel'),vol=$('#sVol'),sfx=$('#sSfx'),mu=$('#sMute');
   const paint=()=>{vol.value=Math.round(Music.S.vol*100);sfx.value=Math.round(Music.S.sfx*100);$('#sVolT').textContent=vol.value+'%';$('#sSfxT').textContent=sfx.value+'%';mu.textContent=Music.S.mute||Music.S.vol===0?'🔇':'🔊';mu.classList.toggle('on',Music.S.mute);$('#sNow').textContent=Music.name||'—'};
   bt.addEventListener('click',e=>{e.stopPropagation();Music.unlock();pn.style.display=pn.style.display==='block'?'none':'block';paint()});
@@ -3148,7 +3201,7 @@ window.__vd={toggleMount,mountModel,HD,get EVN(){return EVN},PVP,pvpOK,hit,isFoe
   const setD=d=>{try{window.__vd.cam={camDist:cl(d,MIN,MAX)}}catch(e){}};
   const st=document.createElement('style');
   /* canto esquerdo, abaixo do painel e acima do joystick: não cobre mais nenhum outro botão */
-  st.textContent='#camZoom{display:flex!important;flex-direction:column!important;gap:8px!important;left:calc(10px + env(safe-area-inset-left))!important;right:auto!important;top:54%!important;bottom:auto!important;z-index:40!important}#camZoom button{width:42px!important;height:42px!important;font-size:24px!important;opacity:.92}#camZoom button.sm{font-size:19px!important}@media (max-height:520px){#camZoom{top:50%!important;gap:5px!important}#camZoom button{width:38px!important;height:38px!important}}';
+  st.textContent='#camZoom{display:flex!important;flex-direction:row!important;gap:8px!important;left:calc(10px + env(safe-area-inset-left))!important;right:auto!important;top:52%!important;bottom:auto!important;z-index:40!important}#camZoom button{width:42px!important;height:42px!important;font-size:24px!important;opacity:.92}#camZoom button.sm{font-size:19px!important}@media (max-height:520px){#camZoom{top:49%!important;gap:5px!important}#camZoom button{width:38px!important;height:38px!important}}';
   document.head.appendChild(st);
   const rs=document.createElement('button');rs.type='button';rs.className='sm';rs.textContent='👤';rs.setAttribute('aria-label','Close-up no personagem');
   minus.after(rs);
