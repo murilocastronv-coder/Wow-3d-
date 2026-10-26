@@ -217,6 +217,56 @@ canvas#gl{position:absolute;inset:0;width:100%;height:100%;display:block;outline
 }
 #camZoom{display:none}
 
+
+/* Responsive HUD v2: portrait + landscape, no overlapping controls */
+@media (max-width:900px),(pointer:coarse){
+  #app{height:100dvh;min-height:0;overflow:hidden}
+  #ab{left:6px;right:6px;bottom:calc(4px + env(safe-area-inset-bottom));width:auto;transform:none;max-width:none;gap:3px;z-index:9}
+  #xpb{width:100%;height:6px}
+  #cast{max-width:65vw;height:13px}
+  #slots{display:flex;flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;overflow-y:hidden;width:100%;max-width:100%;gap:3px;padding:3px 2px 4px;touch-action:pan-x;scrollbar-width:none}
+  #slots::-webkit-scrollbar{display:none}
+  .sl{flex:0 0 38px;width:38px;height:38px;font-size:19px}
+  .sl kbd{font-size:9px}
+  #mn{left:6px;right:6px;bottom:calc(50px + env(safe-area-inset-bottom));display:flex;flex-wrap:nowrap;gap:3px;justify-content:center;z-index:10}
+  #mn .mb{flex:1 1 0;min-width:0;max-width:48px;width:auto;height:38px;font-size:17px;padding:0}
+  #mn .mb kbd{font-size:8px}
+  #joy{left:10px;bottom:calc(96px + env(safe-area-inset-bottom));width:100px;height:100px}
+  #joy i{left:30px;top:30px;width:36px;height:36px}
+  #tb{right:7px;bottom:calc(94px + env(safe-area-inset-bottom));gap:5px}
+  #tb .mb{width:43px;height:43px}
+  #camZoom{position:absolute;z-index:30;right:8px;top:42%;bottom:auto;display:flex;flex-direction:column;gap:7px;pointer-events:auto;touch-action:manipulation}
+  #camZoom button{display:flex;align-items:center;justify-content:center;width:42px;height:42px;border:2px solid var(--line);border-radius:9px;background:linear-gradient(#2d2217,#16100b);color:var(--ink);font:800 25px var(--body);box-shadow:0 2px 8px #000b;touch-action:manipulation;pointer-events:auto}
+}
+@media (max-width:900px) and (orientation:landscape){
+  #ab{left:50%;right:auto;bottom:calc(3px + env(safe-area-inset-bottom));width:min(64vw,560px);transform:translateX(-50%);gap:2px}
+  #xpb{height:5px}
+  #slots{gap:2px;padding:2px}
+  .sl{flex-basis:34px;width:34px;height:34px;font-size:17px}
+  #mn{left:50%;right:auto;bottom:calc(42px + env(safe-area-inset-bottom));width:min(64vw,560px);transform:translateX(-50%);gap:2px}
+  #mn .mb{height:32px;font-size:15px;max-width:44px}
+  #joy{left:10px;bottom:calc(14px + env(safe-area-inset-bottom));width:90px;height:90px}
+  #joy i{left:27px;top:27px;width:32px;height:32px}
+  #tb{right:8px;bottom:calc(14px + env(safe-area-inset-bottom));flex-direction:row;gap:4px}
+  #tb .mb{width:39px;height:39px;font-size:20px}
+  #camZoom{right:8px;top:40%;gap:5px}
+  #camZoom button{width:38px;height:38px}
+  #pf{width:150px}
+  #mm{width:82px}
+  #mmc{width:82px;height:82px}
+  #chat{width:180px}
+  #cl{height:48px;font-size:10px}
+}
+@media (max-height:420px) and (orientation:landscape){
+  #pf{top:4px;left:4px;padding:5px}
+  #mm{top:4px;right:4px}
+  #mn{bottom:calc(39px + env(safe-area-inset-bottom))}
+  #ab{bottom:calc(2px + env(safe-area-inset-bottom))}
+  #joy{width:76px;height:76px}
+  #joy i{left:22px;top:22px;width:28px;height:28px}
+}
+#camZoom{user-select:none;-webkit-user-select:none}
+
 </style>
 </head><body>
 
@@ -2974,24 +3024,28 @@ window.__vd={toggleMount,mountModel,HD,get EVN(){return EVN},PVP,pvpOK,hit,isFoe
 })();
 
 
-/* Camera zoom controls for touch screens; pinch with two fingers also works. */
+/* Reliable camera zoom buttons and pinch, including phone landscape orientation. */
 (function(){
-  const z=document.getElementById('camZoom'), plus=document.getElementById('zoomIn'), minus=document.getElementById('zoomOut');
+  const z=document.getElementById('camZoom'), plus=document.getElementById('zoomIn'), minus=document.getElementById('zoomOut'), canvas=document.getElementById('gl');
   if(!z||!plus||!minus)return;
-  const touch=matchMedia('(pointer:coarse)').matches||innerWidth<=760;
-  if(touch)z.style.display='flex';
+  const isMobile=()=>matchMedia('(pointer:coarse)').matches||innerWidth<=900;
+  const sync=()=>{z.style.display=isMobile()?'flex':'none';};
   function zoom(delta){camDist=clamp(camDist+delta,4,26);}
-  plus.addEventListener('click',e=>{e.preventDefault();zoom(-1.5)});
-  minus.addEventListener('click',e=>{e.preventDefault();zoom(1.5)});
-  let pinchStart=0,pinchDist=0;
-  const canvas=document.getElementById('gl');
+  function bind(btn,delta){
+    const run=e=>{e.preventDefault();e.stopPropagation();zoom(delta);};
+    btn.addEventListener('pointerdown',run,{passive:false});
+    btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();});
+    btn.addEventListener('touchstart',e=>{e.stopPropagation();},{passive:true});
+  }
+  bind(plus,-1.6); bind(minus,1.6);
+  let pinchDist=0,pinchStart=0;
   if(canvas){
     canvas.addEventListener('touchstart',e=>{if(e.touches.length===2){pinchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);pinchStart=camDist;}},{passive:true});
-    canvas.addEventListener('touchmove',e=>{if(e.touches.length===2&&pinchDist>0){e.preventDefault();const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);camDist=clamp(pinchStart-(d-pinchDist)*0.025,4,26);}},{passive:false});
-    canvas.addEventListener('touchend',e=>{if(e.touches.length<2){pinchDist=0;pinchStart=0;}},{passive:true});
+    canvas.addEventListener('touchmove',e=>{if(e.touches.length===2&&pinchDist>0){e.preventDefault();const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);camDist=clamp(pinchStart-(d-pinchDist)*0.035,4,26);}},{passive:false});
+    const reset=()=>{pinchDist=0;pinchStart=0;};
+    canvas.addEventListener('touchend',reset,{passive:true});canvas.addEventListener('touchcancel',reset,{passive:true});
   }
-  window.addEventListener('resize',()=>{z.style.display=(matchMedia('(pointer:coarse)').matches||innerWidth<=760)?'flex':'none'});
+  window.addEventListener('resize',sync);window.addEventListener('orientationchange',()=>setTimeout(sync,120));sync();
 })();
-
 startI18n();setLang(LANG);window.__i18n={TXT,tr:(s,l)=>I18N.tr(s,l)};
 </script></body></html>
