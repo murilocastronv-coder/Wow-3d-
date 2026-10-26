@@ -1658,12 +1658,15 @@ const critCh=()=>.07+gear('crit')+rb('crit')+(P.buf.crit>now()?.25:0);
    Nv 1: ~8 abates · Nv 100: ~18 · Nv 500: ~77 · Nv 1000: ~167 · Nv 1999: ~374. Total até 2000: ~300 mil abates (meses de jogo). */
 const LV_CAP=WD.LV_CAP;
 const mobBaseXp=l=>45+5*l;
-const killsPer=l=>8+.04*Math.pow(l,1.2);
+/* XP MAIS DIFÍCIL: cada abate rende só 60% (XP_RATE) e cada nível exige bem mais abates, e a exigência cresce cada vez mais com o nível.
+   Abates por nível (já contando o XP_RATE): Nv 1: ~24 · Nv 10: ~27 · Nv 100: ~104 · Nv 500: ~670 · Nv 1000: ~1600 · Nv 1999: ~3900. */
+const XP_RATE=.6;
+const killsPer=l=>14+.12*Math.pow(l,1.3);
 const xpNeed=l=>Math.round(killsPer(l)*mobBaseXp(l));
 const zeroDiff=l=>l<=7?5:l<=9?6:l<=11?7:l<=15?8:l<=19?9:l<=29?11:l<=39?12:l<=44?13:l<=49?14:l<=54?15:l<=59?16:17;
 function killXp(mL,pL,boss){let x=mobBaseXp(mL);const d=mL-pL;
   if(d>=0)x*=1+.05*Math.min(d,4);else{const z=zeroDiff(pL);x=-d>=z?x*.02:x*(1-(-d)/z)}   // WoW: monstro cinza rende quase nada
-  return Math.max(1,Math.round(x*(boss?5:1)))}
+  return Math.max(1,Math.round(x*(boss?5:1)*XP_RATE))}
 const fmt=n=>n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e4?(n/1e3).toFixed(1)+'k':String(n);
 
 /* ---------- mensagens ---------- */
@@ -2241,7 +2244,7 @@ document.addEventListener('click',e=>{
   const x=t.closest('[data-x]');if(x){showWin(x.dataset.x,false);if(x.dataset.x==='wNpc'||x.dataset.x==='wShop')P.npc=null;return}
   const ab=t.closest('.sl[data-i]');if(ab){tryUse(+ab.dataset.i);return}
   const acc=t.closest('[data-acc]');if(acc){const id=acc.dataset.acc;P.q[id]={s:'active',n:0};chat('Missão aceita: '+QUESTS[id].n,'#ffd34a');snd(600,.15,'triangle');questCheck();renderNpc(P.npc);return}
-  const tn=t.closest('[data-turn]');if(tn){const id=tn.dataset.turn,q=QUESTS[id];if(q.item)removeItem(q.item,q.need);P.q[id].s='done';P.gold+=q.gold;giveXp(q.xp);
+  const tn=t.closest('[data-turn]');if(tn){const id=tn.dataset.turn,q=QUESTS[id];if(q.item)removeItem(q.item,q.need);P.q[id].s='done';P.gold+=q.gold;giveXp(Math.round(q.xp*XP_RATE));
     if(q.reward){const it=genItem(Math.max(P.lvl,q.lv),q.reward.rar,q.reward.slot);addItem(it);chat('Recompensa: '+it.name,'#4a9bff')}
     chat('Missão concluída: '+q.n+' (+'+q.xp+' XP, +'+q.gold+' ouro)','#ffd34a');toast('Missão concluída!');snd(800,.4,'triangle',.07);renderNpc(P.npc);refreshWins();save();return}
   if(t.closest('[data-shop]')){openShop();return}
@@ -3136,36 +3139,34 @@ window.__vd={toggleMount,mountModel,HD,get EVN(){return EVN},PVP,pvpOK,hit,isFoe
 })();
 
 
-/* HUD de zoom: botões + / − , barra e atalho de close-up. Funciona no PC (roda do mouse também) e no celular (pinça). */
+/* HUD de zoom. Fica FORA do laço principal do jogo, então lê/escreve a câmera por window.__vd.cam (camDist não é visível aqui). */
 (function(){
   const z=document.getElementById('camZoom'), plus=document.getElementById('zoomIn'), minus=document.getElementById('zoomOut'), canvas=document.getElementById('gl');
   if(!z||!plus||!minus)return;
-  const MIN=1.4,MAX=60,DEF=11;
-  const st=document.createElement('style');st.textContent='#camZoom{display:flex!important;flex-direction:column;align-items:center;gap:6px;right:10px;top:38%;bottom:auto;z-index:40}#camZoom input[type=range]{writing-mode:vertical-lr;direction:rtl;height:110px;width:22px;accent-color:#d3a94a;touch-action:none;pointer-events:auto}#camZoom button.sm{font-size:17px}';
+  const MIN=1.4,MAX=60,DEF=11,cl=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const getD=()=>{try{return window.__vd.cam.camDist}catch(e){return DEF}};
+  const setD=d=>{try{window.__vd.cam={camDist:cl(d,MIN,MAX)}}catch(e){}};
+  const st=document.createElement('style');
+  /* canto esquerdo, abaixo do painel e acima do joystick: não cobre mais nenhum outro botão */
+  st.textContent='#camZoom{display:flex!important;flex-direction:column!important;gap:8px!important;left:calc(10px + env(safe-area-inset-left))!important;right:auto!important;top:54%!important;bottom:auto!important;z-index:40!important}#camZoom button{width:42px!important;height:42px!important;font-size:24px!important;opacity:.92}#camZoom button.sm{font-size:19px!important}@media (max-height:520px){#camZoom{top:50%!important;gap:5px!important}#camZoom button{width:38px!important;height:38px!important}}';
   document.head.appendChild(st);
-  const sl=document.createElement('input');sl.type='range';sl.min=0;sl.max=1000;sl.setAttribute('aria-label','Zoom');
-  const rs=document.createElement('button');rs.type='button';rs.className='sm';rs.textContent='👤';rs.title='Close-up no personagem';
-  minus.after(sl);sl.after(rs);
-  const toS=d=>Math.round(Math.log(d/MIN)/Math.log(MAX/MIN)*1000), fromS=v=>MIN*Math.pow(MAX/MIN,v/1000);
-  const setD=d=>{camDist=clamp(d,MIN,MAX);};
-  sl.addEventListener('input',()=>setD(fromS(+sl.value)));
-  ['pointerdown','touchstart','mousedown'].forEach(ev=>sl.addEventListener(ev,e=>e.stopPropagation(),{passive:true}));
-  setInterval(()=>{if(document.activeElement!==sl)sl.value=toS(camDist);},120);
+  const rs=document.createElement('button');rs.type='button';rs.className='sm';rs.textContent='👤';rs.setAttribute('aria-label','Close-up no personagem');
+  minus.after(rs);
   function bind(btn,f){
-    let t=null;const run=e=>{e.preventDefault();e.stopPropagation();setD(camDist*f);clearInterval(t);t=setInterval(()=>setD(camDist*f),70);};
-    const stop=()=>{clearInterval(t);t=null};
-    btn.addEventListener('pointerdown',run,{passive:false});['pointerup','pointerleave','pointercancel'].forEach(ev=>btn.addEventListener(ev,stop));
-    btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();});
-    btn.addEventListener('touchstart',e=>{e.stopPropagation();},{passive:true});
+    let t=null;const stop=()=>{if(t){clearInterval(t);t=null}};
+    btn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();setD(getD()*f);stop();t=setInterval(()=>setD(getD()*f),60)},{passive:false});
+    ['pointerup','pointerleave','pointercancel'].forEach(ev=>btn.addEventListener(ev,stop));
+    btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation()});
+    btn.addEventListener('touchstart',e=>{e.stopPropagation()},{passive:true});
   }
-  bind(plus,.95); bind(minus,1.05);
-  rs.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();setD(camDist>4?2.6:DEF);},{passive:false});
-  window.addEventListener('keydown',e=>{if(/INPUT|TEXTAREA/.test((e.target||{}).tagName||''))return;if(e.key==='+'||e.key==='=')setD(camDist*.88);if(e.key==='-'||e.key==='_')setD(camDist*1.14);});
+  bind(plus,.94); bind(minus,1.06);
+  rs.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();setD(getD()>4?2.4:DEF)},{passive:false});
+  window.addEventListener('keydown',e=>{if(/INPUT|TEXTAREA/.test((e.target||{}).tagName||''))return;if(e.key==='+'||e.key==='=')setD(getD()*.88);if(e.key==='-'||e.key==='_')setD(getD()*1.14)});
   let pinchDist=0,pinchStart=0;
   if(canvas){
-    canvas.addEventListener('touchstart',e=>{if(e.touches.length===2){pinchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);pinchStart=camDist;}},{passive:true});
-    canvas.addEventListener('touchmove',e=>{if(e.touches.length===2&&pinchDist>0){e.preventDefault();const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);setD(pinchStart*pinchDist/d);}},{passive:false});
-    const reset=()=>{pinchDist=0;pinchStart=0;};
+    canvas.addEventListener('touchstart',e=>{if(e.touches.length===2){pinchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);pinchStart=getD()}},{passive:true});
+    canvas.addEventListener('touchmove',e=>{if(e.touches.length===2&&pinchDist>0){e.preventDefault();const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);setD(pinchStart*pinchDist/d)}},{passive:false});
+    const reset=()=>{pinchDist=0;pinchStart=0};
     canvas.addEventListener('touchend',reset,{passive:true});canvas.addEventListener('touchcancel',reset,{passive:true});
   }
 })();
