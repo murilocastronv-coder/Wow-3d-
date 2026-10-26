@@ -356,6 +356,18 @@ canvas#gl{position:absolute;inset:0;width:100%;height:100%;display:block;outline
 #title .ng div{padding:10px 11px;border:1px solid #4a3a1f;border-radius:8px;background:linear-gradient(160deg,rgba(40,30,18,.85),rgba(14,10,6,.85));box-shadow:inset 0 0 0 1px rgba(241,215,143,.06)}
 #title .ng b{display:block;color:var(--gold2);font:700 14px var(--disp)}#title .ng small{display:block;color:#b9ab8e;font-size:12.5px;line-height:1.38;margin-top:3px}
 @media (max-width:860px){#title .ng{grid-template-columns:1fr}#title .pill{font-size:12px}}
+/* ===== v11: correções de layout ===== */
+/* celular em pé: a hotbar ficava presa entre o joystick e os botões de ação (190px, com rolagem) e escondia Poção e Montaria; agora fica inteira, acima do joystick */
+@media (max-width:520px) and (orientation:portrait){
+  #ab{left:50%;right:auto;width:max-content;max-width:calc(100vw - 12px);transform:translateX(-50%);bottom:calc(104px + env(safe-area-inset-bottom));align-items:center}
+  #xpb{width:100%}
+  #slots{width:auto;max-width:none;overflow:visible;justify-content:center;touch-action:manipulation}
+  #mn{bottom:calc(158px + env(safe-area-inset-bottom))}
+}
+/* desktop/tablet de ~900–1300px: o menu (C B L O U…) cobria os slots 5–6 da hotbar; agora quebra em 2 linhas à direita */
+@media (min-width:761px) and (max-width:1300px) and (pointer:fine){
+  #mn{flex-wrap:wrap;justify-content:flex-end;width:calc(50vw - 190px);right:10px;bottom:10px}
+}
 </style>
 </head><body>
 
@@ -1684,7 +1696,7 @@ const POT=()=>({id:'pot',name:'Poção de Cura',ic:'🧪',n:1,stack:1,price:6,ra
 const TUSK=()=>({id:'tusk',name:'Presa de Javali',ic:'🦷',n:1,stack:1,price:2,rar:0,quest:1});
 
 /* ---------- estado ---------- */
-let P=null,started=false,tNow=0,last=0,gameHour=10,camYaw=0,camPitch=.42,camDist=11;
+let P=null,started=false,tNow=0,last=0,gameHour=10,camYaw=0,camPitch=.42,camDist=11,camEff=11;
 const ENT=[],FT=[],PROJ=[],NP=new Map(),keys={};
 const E_MOBS=()=>ENT.filter(e=>e.k==='mob'||pvpOK(e));const isFoe=e=>!!e&&(e.k==='mob'||pvpOK(e));
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
@@ -1930,7 +1942,11 @@ function render(){
   resize();sky();
   const asp=SW/SH;const f=[Math.sin(camYaw)*Math.cos(camPitch),Math.sin(camPitch),Math.cos(camYaw)*Math.cos(camPitch)];
   const ty=P?P.y+(P.mounted?2.6:1.6)-(1-clamp((camDist-1.4)/6,0,1))*(P&&P.mounted?.5:.15):6;const tx=P?P.x:0,tz=P?P.z:0;
-  camX=tx+f[0]*camDist;camY=Math.max(ty+f[1]*camDist,heightAt(camX,tz+f[2]*camDist)+1.2);camZ=tz+f[2]*camDist;
+  /* v11: a câmera não atravessa mais árvores/casas — percorre o raio do herói até a câmera e encurta onde bate num colisor (aproxima rápido, afasta devagar) */
+  let cd=camDist;
+  if(P&&camDist>2.2){for(let k=2;k<=camDist;k+=.8){const px=tx+f[0]*k,pz=tz+f[2]*k,py=ty+f[1]*k;if(py-heightAt(px,pz)>7)continue;const q=pushOut(px,pz,.7);if(Math.abs(q[0]-px)+Math.abs(q[1]-pz)>.02){cd=Math.max(2,k-.8);break}}}
+  camEff+=(cd-camEff)*(cd<camEff?.5:.06);if(camEff>camDist)camEff=camDist;
+  camX=tx+f[0]*camEff;camY=Math.max(ty+f[1]*camEff,heightAt(camX,tz+f[2]*camEff)+1.2);camZ=tz+f[2]*camEff;
   camY=Math.max(camY,heightAt(camX,camZ)+1.2);
   VP=M4.mul(M4.persp(1.0,asp,.08,700),M4.look(camX,camY,camZ,tx,ty,tz));
   gl.clearColor(SKY.col[0],SKY.col[1],SKY.col[2],1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
