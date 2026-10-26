@@ -1221,14 +1221,25 @@ function buildTerrain(){
       tri(WORLDV,T[0],T[1],T[2],colAt(cx,cz,ch,1-n[1]),n)}}
 }
 function plant(){
-  const trunk=cone(.3,.18,1.7,5,0,0,0,[.4,.27,.15],true);
-  const pine=[cone(1.7,0,2.4,7,0,1.3,0,[.12,.38,.18]),cone(1.35,0,2.2,7,0,2.7,0,[.14,.43,.2]),cone(.95,0,1.9,7,0,4,0,[.17,.5,.23])];
-  const rounds=[sphere(1.6,7,5,0,2.6,0,[.28,.52,.2],.85),sphere(1.2,6,5,.7,3.1,.3,[.34,.6,.24],.85)];
+  /* Higher-detail stylized fantasy vegetation: layered foliage, less angular silhouettes. */
+  const trunk=cone(.34,.19,2.0,9,0,0,0,[.34,.22,.12],true);
+  const pine=[
+    cone(1.9,0,2.5,11,0,1.1,0,[.075,.29,.13]),
+    cone(1.62,0,2.5,11,0,2.25,0,[.09,.35,.15]),
+    cone(1.32,0,2.3,11,0,3.35,0,[.12,.41,.17]),
+    cone(.96,0,2.0,11,0,4.35,0,[.17,.48,.2])
+  ];
+  const rounds=[
+    sphere(1.45,12,8,0,2.65,0,[.22,.43,.16],.95),
+    sphere(1.25,11,8,.78,3.0,.22,[.3,.52,.19],.95),
+    sphere(1.08,11,8,-.72,3.15,-.28,[.36,.58,.22],1.0),
+    sphere(.82,10,7,.15,3.8,.52,[.4,.63,.26],.95)
+  ];
   const dead=[cone(.25,.05,3.6,5,0,0,0,[.32,.25,.2],true),cone(.12,.02,1.6,4,0,1.8,0,[.32,.25,.2],true)];
   const rock=sphere(1,6,4,0,.2,0,[.5,.5,.5],.65);
   const cactus=[cone(.28,.24,2.2,6,0,0,0,[.22,.5,.2],true),cone(.14,.12,.9,5,.34,1.0,0,[.24,.54,.22],true)];
   let n=0;
-  for(let tries=0;tries<12000&&n<1700;tries++){
+  for(let tries=0;tries<15000&&n<1900;tries++){
     const x=(treeRng()-.5)*(WORLD-30),z=(treeRng()-.5)*(WORLD-30),h=heightAt(x,z);
     if(h<WATER+1.4||h>15||Math.hypot(x,z)<46||roadDist(x,z)<5)continue;
     const zn=zoneAt(x,z);if(zn.id==='crypt')continue;const dens=zn.id==='forest'?.95:zn.id==='goblin'?.35:zn.id==='grave'?.25:zn.id==='desert'?.1:zn.id==='snow'?.8:zn.id==='swamp'?.55:.5*(fbm(x*.04,z*.04)>.5?1:.35);
