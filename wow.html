@@ -1156,21 +1156,12 @@ const VS=`attribute vec3 aP;attribute vec3 aN;attribute vec3 aC;uniform mat4 uVP
 varying vec3 vN;varying vec3 vC;varying float vD;varying vec3 vW;
 void main(){vec4 w=uM*vec4(aP,1.0);gl_Position=uVP*w;vN=mat3(uM)*aN;vC=aC;vW=w.xyz;vD=length(w.xyz-uCam);}`;
 const FS=`precision mediump float;varying vec3 vN;varying vec3 vC;varying float vD;varying vec3 vW;
-uniform vec3 uCam;uniform vec3 uTint;uniform vec3 uEmis;uniform float uAlpha;uniform float uUnlit;uniform float uWater;uniform float uTime;
+uniform vec3 uTint;uniform vec3 uEmis;uniform float uAlpha;uniform float uUnlit;uniform float uWater;uniform float uTime;
 uniform vec3 uSunDir;uniform vec3 uSunCol;uniform vec3 uAmbS;uniform vec3 uAmbG;uniform vec3 uFogCol;uniform float uFogN;uniform float uFogF;
-void main(){vec3 n=normalize(vN);vec3 c=max(vC*uTint,vec3(0.0));vec3 lit;
- if(uUnlit>.5){lit=c;}else{
-   vec3 l=normalize(uSunDir);vec3 v=normalize(uCam-vW);vec3 h=normalize(l+v);
-   float ndl=max(dot(n,l),0.0);float hemiMix=clamp(n.y*.5+.5,0.0,1.0);
-   vec3 hemi=mix(uAmbG,uAmbS,hemiMix);float roughSpec=pow(max(dot(n,h),0.0),24.0)*ndl;
-   float fresnel=pow(1.0-max(dot(n,v),0.0),3.0);
-   float occlusion=.82+.18*hemiMix;
-   lit=c*(hemi*occlusion+uSunCol*ndl);
-   lit+=uSunCol*roughSpec*.16;
-   lit+=c*fresnel*.035;
- }
- if(uWater>.5){float wave=sin(vW.x*.9+uTime*1.4)*sin(vW.z*.8+uTime*1.1)*.5+.5;lit+=vec3(.055,.09,.12)*wave;lit+=vec3(.12,.16,.19)*pow(max(dot(normalize(vN),normalize(uSunDir)),0.0),12.0);}
- lit+=uEmis;lit=lit/(vec3(1.0)+max(lit,vec3(0.0))*.12);float f=clamp((vD-uFogN)/(uFogF-uFogN),0.0,1.0);f=f*f*(3.0-2.0*f);lit=mix(lit,uFogCol,f);gl_FragColor=vec4(lit,uAlpha);}`;
+void main(){vec3 n=normalize(vN);vec3 c=vC*uTint;vec3 lit;
+ if(uUnlit>.5){lit=c;}else{float d=max(dot(n,uSunDir),0.0);vec3 hemi=mix(uAmbG,uAmbS,n.y*.5+.5);lit=c*(hemi+uSunCol*d);}
+ if(uWater>.5){lit+=vec3(.05,.07,.09)*(sin(vW.x*.9+uTime*1.4)*sin(vW.z*.8+uTime*1.1)*.5+.5);}
+ lit+=uEmis;float f=clamp((vD-uFogN)/(uFogF-uFogN),0.0,1.0);lit=mix(lit,uFogCol,f);gl_FragColor=vec4(lit,uAlpha);}`;
 function sh(t,s){const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))console.error(gl.getShaderInfoLog(o));return o}
 const prog=gl.createProgram();gl.attachShader(prog,sh(gl.VERTEX_SHADER,VS));gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,FS));gl.linkProgram(prog);
 if(!gl.getProgramParameter(prog,gl.LINK_STATUS))console.error(gl.getProgramInfoLog(prog));
@@ -1200,7 +1191,7 @@ function pushOut(x,z,rad){for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const a=c
 /* ---------- construção do mundo estático ---------- */
 const WORLDV=[],treeRng=(()=>{let s=99;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296}})();
 function buildTerrain(){
-  const N=240,st=WORLD/N,H=[];
+  const N=200,st=WORLD/N,H=[];
   for(let i=0;i<=N;i++){H[i]=[];for(let j=0;j<=N;j++)H[i][j]=heightAt(-HALF+i*st,-HALF+j*st)}
   const colAt=(x,z,h,sl)=>{
     let c;const nz=noise(x*.4,z*.4);
