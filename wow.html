@@ -267,6 +267,37 @@ canvas#gl{position:absolute;inset:0;width:100%;height:100%;display:block;outline
 }
 #camZoom{user-select:none;-webkit-user-select:none}
 
+
+/* HUD v3: reserve separate vertical lanes for joystick, menu and hotbar */
+@media (max-width:900px),(pointer:coarse){
+  #ab{left:8px;right:8px;bottom:calc(3px + env(safe-area-inset-bottom));width:auto;transform:none;z-index:12}
+  #mn{left:50%;right:auto;width:min(72vw,460px);transform:translateX(-50%);bottom:calc(66px + env(safe-area-inset-bottom));gap:4px;z-index:13}
+  #mn .mb{height:36px;max-width:48px}
+  #joy{left:10px;bottom:calc(88px + env(safe-area-inset-bottom));width:94px;height:94px;z-index:14}
+  #joy i{left:28px;top:28px;width:34px;height:34px}
+  #tb{right:7px;bottom:calc(88px + env(safe-area-inset-bottom));z-index:14}
+  #camZoom{right:8px;top:42%;bottom:auto;z-index:40}
+}
+@media (max-width:900px) and (orientation:landscape){
+  #ab{left:50%;right:auto;bottom:calc(2px + env(safe-area-inset-bottom));width:min(58vw,520px);transform:translateX(-50%);z-index:12}
+  #slots{gap:2px;padding:2px}
+  .sl{flex-basis:32px;width:32px;height:32px;font-size:16px}
+  #xpb{height:4px}
+  #mn{left:50%;right:auto;width:min(58vw,520px);bottom:calc(46px + env(safe-area-inset-bottom));transform:translateX(-50%);gap:2px;z-index:13}
+  #mn .mb{height:30px;font-size:14px;max-width:42px}
+  #joy{left:8px;bottom:calc(10px + env(safe-area-inset-bottom));width:78px;height:78px}
+  #joy i{left:23px;top:23px;width:28px;height:28px}
+  #tb{right:7px;bottom:calc(10px + env(safe-area-inset-bottom));flex-direction:row;gap:3px}
+  #tb .mb{width:36px;height:36px;font-size:18px}
+  #camZoom{right:8px;top:38%;gap:5px}
+  #camZoom button{width:38px;height:38px}
+}
+@media (max-height:420px) and (orientation:landscape){
+  #mn{bottom:calc(42px + env(safe-area-inset-bottom))}
+  #ab{bottom:calc(1px + env(safe-area-inset-bottom))}
+  #camZoom{top:34%}
+}
+
 </style>
 </head><body>
 
