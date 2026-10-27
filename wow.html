@@ -382,8 +382,8 @@ canvas#gl{position:absolute;inset:0;width:100%;height:100%;display:block;outline
 .ipX{position:absolute;right:-4px;top:-4px;background:none;border:none;color:var(--gold2);font-size:22px;cursor:pointer}
 .ipD{margin:8px 0 4px;font-size:13px;color:#d8ccb0}.ipS{display:flex;flex-wrap:wrap;gap:4px 10px;margin:4px 0;font-size:13.5px;color:#a9d08e}
 .ipC{margin:8px 0;padding:6px 8px;border:1px solid #3a2f1e;border-radius:6px;background:rgba(0,0,0,.35)}.cvh{font-size:12px;color:#b9ab8e;margin-bottom:4px}
-.cr{display:grid;grid-template-columns:1fr auto auto;gap:8px;font-size:13px;padding:1px 0}.cr i{font-style:normal;font-weight:800;min-width:64px;text-align:right}
-.up{color:#4fdc6a!important}.dn{color:#ff5a4a!important}.cr .eq{color:#9aa0a6}
+.cmpr{display:grid;grid-template-columns:1fr auto auto;gap:8px;font-size:13px;padding:1px 0}.cmpr i{font-style:normal;font-weight:800;min-width:64px;text-align:right}
+.up{color:#4fdc6a!important}.dn{color:#ff5a4a!important}.cmpr .eq{color:#9aa0a6}
 .verd{margin-top:5px;font:800 13px var(--body);text-align:center;padding:3px;border-radius:4px}.verd.better,.verd.new{color:#4fdc6a;background:rgba(79,220,106,.1)}.verd.worse{color:#ff5a4a;background:rgba(255,90,74,.1)}.verd.same{color:#e8d9a8;background:rgba(255,255,255,.05)}
 .ipW{color:#ff6a5a;font-size:13px;margin:4px 0}.ipB{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.ipB .btn{flex:1 1 auto;min-height:40px}.btn[disabled]{opacity:.45;cursor:not-allowed;filter:grayscale(.6)}
 /* chat em abas */
@@ -419,6 +419,28 @@ canvas#gl{position:absolute;inset:0;width:100%;height:100%;display:block;outline
 @media (max-width:760px),(pointer:coarse){#itPop{top:auto;bottom:calc(8px + env(safe-area-inset-bottom));transform:translateX(-50%);max-height:70vh}
   #wBank,#wForge,#wStable,#wSub{left:4px!important;right:4px!important;top:46px!important;transform:none!important;max-width:none;max-height:72vh}
   .bankg{grid-template-columns:repeat(6,44px)!important}#feed{top:70px}.tree{grid-template-columns:1fr}#ctabs button{font-size:10.5px;padding:3px 1px}}
+
+/* ===== celular: menu ☰ (todos os botões num painel), chat só quando abre o 💬, zoom na lateral direita ===== */
+#menuBtn{display:none}
+@media (max-width:900px),(pointer:coarse){
+  #menuBtn{display:flex;align-items:center;justify-content:center;position:absolute;left:106px;top:92px;width:40px;height:40px;font-size:21px;z-index:12;padding:0}
+  #mn{display:none!important}
+  #app.mnopen #mn{display:grid!important;position:fixed!important;left:50%!important;right:auto!important;top:50%!important;bottom:auto!important;transform:translate(-50%,-50%)!important;width:auto!important;max-width:94vw!important;grid-template-columns:repeat(4,64px);gap:10px!important;padding:16px 14px 14px!important;background:rgba(20,15,10,.97);border:2px solid var(--line);border-radius:12px;z-index:70!important;box-shadow:0 12px 44px #000}
+  #app.mnopen #mn .mb{width:64px!important;height:64px!important;max-width:none!important;flex:none!important;font-size:27px!important;position:relative}
+  #app.mnopen #mn .mb kbd{display:none}
+  #app.mnopen #mn .mb::after{content:attr(data-lbl);position:absolute;left:0;right:0;bottom:3px;font:700 9.5px var(--body);color:#d8c9a6;text-align:center}
+  #mnShade{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:69}#app.mnopen #mnShade{display:block}
+  .touch #chat{display:none!important}
+  .touch #chat.copen{display:flex!important;flex-direction:column!important;top:140px!important;left:8px!important;width:min(92vw,360px)!important;pointer-events:auto!important;z-index:30}
+  .touch #chat.copen #ci{display:block!important}
+  #chBtn.new::after{content:'';position:absolute;top:3px;right:3px;width:9px;height:9px;border-radius:50%;background:#ff4a3a;box-shadow:0 0 4px #ff4a3a}
+  .touch #camZoom{left:auto!important;right:8px!important;top:42%!important;flex-direction:column!important;gap:6px!important}
+  .touch #camZoom button{width:38px!important;height:38px!important;font-size:20px!important;opacity:.8}
+}
+@media (max-width:760px){#menuBtn{top:84px}}
+@media (max-height:520px) and (orientation:landscape){#menuBtn{top:48px}}
+/* criador de heróis no celular: classes em 5 colunas legíveis, raças e aparência embaixo */
+@media (max-width:520px){.crtop{flex-direction:row}.crg.crc{grid-template-columns:repeat(5,1fr)}.crg.crc button small{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.crr{grid-template-columns:repeat(3,1fr)!important}.cra{grid-template-columns:1fr}}
 </style></head><body>
 
 <div id="app">
@@ -2794,7 +2816,7 @@ setInterval(pollChat,2000);
 /* as mensagens somem uma a uma: 15 s depois de aparecer (as últimas 5 s esmaecem). Com o campo de texto aberto o relógio para, para dar tempo de ler e responder. */
 {let lt=Date.now();setInterval(()=>{const n=Date.now(),dt=n-lt;lt=n;const cl={children:[]},frozen=document.activeElement===$('#ci');
   for(const p of [...cl.children]){if(frozen)p.dataset.t=+p.dataset.t+dt;const a=(n-p.dataset.t)/1000;if(a>=15){p.remove();continue}p.style.opacity=a<10?1:Math.max(0,1-(a-10)/5)}},200)}
-$('#chBtn').addEventListener('click',e=>{e.stopPropagation();const ci=$('#ci');if(ci.style.display==='block'){ci.style.display='none';ci.blur()}else{ci.style.display='block';ci.focus()}});
+$('#chBtn').addEventListener('click',e=>{e.stopPropagation();if($('#app').classList.contains('touch')){const c=$('#chat'),o=!c.classList.contains('copen');c.classList.toggle('copen',o);$('#chBtn').classList.remove('new');if(o)setTimeout(()=>{chatRender();$('#ci').focus()},30);else $('#ci').blur();return}const ci=$('#ci');if(ci.style.display==='block'){ci.style.display='none';ci.blur()}else{ci.style.display='block';ci.focus()}});
 $('#chBtn').addEventListener('pointerdown',e=>e.stopPropagation());
 
 /* ---------- multiplayer: outros jogadores em tempo real (WebSocket /ws3d) ---------- */
@@ -3376,7 +3398,7 @@ function autoEqSrv(){if(!OPT.eq||!SRV()||now()-autoEqT<1)return;autoEqT=now();fo
 const STN=[['atk','Ataque',1],['arm','Armadura',1],['hp','Vida',1],['crit','Crítico',100,'%'],['spd','Velocidade',100,'%']];
 function cmpOf(it){const cur=it&&it.slot?P.eq[it.slot]:null;const rows=[];let up=0,dn=0;
   for(const [k,n,m,suf] of STN){const a=(it[k]||0)*m,b=(cur?(cur[k]||0):0)*m;if(!a&&!b)continue;const d=+(a-b).toFixed(suf?1:0);if(d>0)up+=d*(k==='hp'?.2:k==='crit'||k==='spd'?20:1);if(d<0)dn+=-d*(k==='hp'?.2:k==='crit'||k==='spd'?20:1);
-    rows.push('<div class="cr"><span>'+n+'</span><b>'+(+a.toFixed(suf?1:0))+(suf||'')+'</b><i class="'+(d>0?'up':d<0?'dn':'eq')+'">'+(d>0?'▲ +'+d:d<0?'▼ '+d:'=')+(d?(suf||''):'')+'</i></div>')}
+    rows.push('<div class="cmpr"><span>'+n+'</span><b>'+(+a.toFixed(suf?1:0))+(suf||'')+'</b><i class="'+(d>0?'up':d<0?'dn':'eq')+'">'+(d>0?'▲ +'+d:d<0?'▼ '+d:'=')+(d?(suf||''):'')+'</i></div>')}
   const s1=itScore(it),s0=itScore(cur),v=!cur?'new':s1>s0*1.02?'better':s1<s0*.98?'worse':'same';return{rows,cur,v}}
 function itDesc(it){if(it.slot){const w=it.wt&&WI.WT[it.wt];return (w?(w.hand===2?'Arma de duas mãos':'Arma de uma mão')+(it.cl?' · Classes: '+it.cl.map(c=>CLS[c]?CLS[c].n:c).join(', '):''):SLOTS[it.slot])+(it.set?'<br><span style="color:#7ae09a">'+WI.SETS[it.set].n+'</span>':'')+(it.ev?'<br>★ Relíquia de evento':'')+(it.myth?'<br><span style="color:var(--r6)">Forjado pelo Ferreiro Durgan</span>':'')}
   const m=WI.MATS[it.id];return m?m.d:''}
@@ -3517,7 +3539,7 @@ const CHT={tab:'l',min:false,log:[],unread:{}};
 const CHCOL={l:'#ffffff',a:'#ffd34a',g:'#5ae07a',w:'#ff8ad8',i:'#6ab8ff'},CHN={l:'Local',a:'Global',g:'Guilda',w:'Privado',i:'Info'};
 function chatIn(k,n,x){let tab=k==='wo'?'w':k==='p'?'l':k;if(!CHN[tab])tab='l';
   CHT.log.push({tab,n:(k==='p'?'[Grupo] ':'')+(k==='wo'?'Para '+n:n),x,c:k==='p'?'#6ad4ff':CHCOL[tab],t:Date.now(),me:P&&n===P.name});if(CHT.log.length>250)CHT.log.splice(0,CHT.log.length-250);
-  if(tab!==CHT.tab||CHT.min)CHT.unread[tab]=(CHT.unread[tab]|0)+1;chatRender()}
+  if(tab!==CHT.tab||CHT.min)CHT.unread[tab]=(CHT.unread[tab]|0)+1;if(!$('#chat').classList.contains('copen'))$('#chBtn').classList.add('new');chatRender()}
 function chatRender(){const cl=$('#cl');if(!cl)return;const L=CHT.log.filter(m=>m.tab===CHT.tab).slice(-60);
   cl.innerHTML=L.map(m=>'<p style="color:'+m.c+'"><b>'+esc(m.n)+':</b> '+esc(m.x)+'</p>').join('')||'<p class="cemp">Nenhuma mensagem em '+CHN[CHT.tab]+'.</p>';cl.scrollTop=cl.scrollHeight;
   for(const b of $$('#ctabs [data-ct]')){const k=b.dataset.ct;b.classList.toggle('on',k===CHT.tab);const u=CHT.unread[k]|0;b.querySelector('i').textContent=u?(u>9?'9+':u):''}
@@ -3545,7 +3567,16 @@ setInterval(()=>{if(P&&$('#wMap')&&$('#wMap').style.display==='block')mapUI()},5
   for(const ev of ['pointerdown','touchstart'])p.addEventListener(ev,e=>e.stopPropagation(),{passive:true});
   const mb=document.createElement('button');mb.className='mb';mb.dataset.w='wStable';mb.title='Montarias (M)';mb.innerHTML='🐴<kbd>M</kbd>';$('#mn').insertBefore(mb,$('#pvpBtn'));
   const mp=document.createElement('button');mp.className='mb';mp.dataset.w='wMap';mp.title='Mapa (N)';mp.innerHTML='🗺️<kbd>N</kbd>';$('#mn').insertBefore(mp,$('#pvpBtn'));
-  const sb=document.createElement('button');sb.className='mb';sb.dataset.w='wSub';sb.title='Subclasse (J)';sb.innerHTML='🎖️<kbd>J</kbd>';$('#mn').insertBefore(sb,$('#pvpBtn'))})();
+  const mbtn=document.createElement('button');mbtn.id='menuBtn';mbtn.className='mb';mbtn.title='Menu';mbtn.textContent='☰';$('#app').appendChild(mbtn);
+  const shade=document.createElement('div');shade.id='mnShade';$('#app').appendChild(shade);
+  const close=()=>$('#app').classList.remove('mnopen');
+  mbtn.addEventListener('click',e=>{e.stopPropagation();$('#app').classList.toggle('mnopen')});shade.addEventListener('pointerdown',e=>{e.preventDefault();close()});
+  $('#mn').addEventListener('click',()=>setTimeout(close,0));
+  for(const ev of ['pointerdown','touchstart'])mbtn.addEventListener(ev,e=>e.stopPropagation(),{passive:true});
+  const sb=document.createElement('button');sb.className='mb';sb.dataset.w='wSub';sb.title='Subclasse (J)';sb.innerHTML='🎖️<kbd>J</kbd>';$('#mn').insertBefore(sb,$('#pvpBtn'));
+  const LBL={wChar:'Herói',wBag:'Mochila',wQ:'Missões',wSoc:'Social',wStore:'Loja',wStable:'Montaria',wMap:'Mapa',wSub:'Subclasse',wHelp:'Ajuda'};
+  setTimeout(()=>{for(const b of $$('#mn .mb'))b.dataset.lbl=LBL[b.dataset.w]||(b.id==='langBtn'?'Idioma':b.id==='pvpBtn'?'PvP':b.textContent.trim()==='⛶'?'Tela cheia':'')},0);
+})();
 
 /* ---------- painel de ADM (só aparece para a conta do dono; o servidor confere de novo em toda ação) ---------- */
 let GMON=0;

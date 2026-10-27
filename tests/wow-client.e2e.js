@@ -113,7 +113,7 @@ async function start() { srv = spawn(process.execPath, ['server.js'], { cwd: ROO
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     const m1 = await pm.evaluate(() => ({ x: window.__vd.P.x, z: window.__vd.P.z })); ok(Math.hypot(m1.x - m0.x, m1.z - m0.z) > 2, 'joystick moveu o herói (' + Math.hypot(m1.x - m0.x, m1.z - m0.z).toFixed(1) + ' m)');
     await pm.screenshot({ path: path.join(OUT, '08-celular.png') });
-    await pm.click('#mn [data-w="wBag"]'); await sleep(300); const pi = await pm.evaluate(() => window.__vd.P.inv.findIndex(x => x.slot || x.id === 'pot'));
+    await pm.tap('#menuBtn'); await sleep(300); ok(await pm.isVisible('#mn'), 'menu ☰ abre o painel de botões no celular'); await pm.tap('#mn [data-w="wBag"]'); await sleep(300); const pi = await pm.evaluate(() => window.__vd.P.inv.findIndex(x => x.slot || x.id === 'pot'));
     if (pi >= 0) { await pm.tap('#bagG [data-src="bag:' + pi + '"]'); await sleep(300); ok(await pm.isVisible('#itPop'), 'toque no item abre a janela no celular'); await pm.screenshot({ path: path.join(OUT, '09-celular-item.png') }); }
     ok(errs.length === 0, 'nenhum erro de JavaScript' + (errs.length ? ': ' + errs.slice(0, 5).join(' | ') : ''));
   } catch (e) { failed++; console.error('ERRO', e); }
