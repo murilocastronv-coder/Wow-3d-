@@ -15,7 +15,11 @@ const ZONES=[
   {id:'desert',name:'Areias Escarlates',x:180,z:-150,r:62,lv:'10-14',col:[.82,.68,.4]},
   {id:'snow',name:'Cume Gélido',x:-160,z:-175,r:66,lv:'14-18',col:[.88,.92,.97]},
   {id:'swamp',name:'Brejo da Névoa',x:-50,z:185,r:62,lv:'18-22',col:[.2,.3,.17]},
-  {id:'crypt',name:'Cripta de Morvak',x:215,z:175,r:36,lv:'masmorra',col:[.24,.21,.27]}];
+  {id:'crypt',name:'Cripta de Morvak',x:215,z:175,r:36,lv:'masmorra',col:[.24,.21,.27]},
+  {id:'volcano',name:'Vulcão de Ignar',x:-215,z:-35,r:50,lv:'24-32',col:[.34,.18,.14]},
+  {id:'ruins',name:'Ruínas de Eldoria',x:150,z:120,r:46,lv:'28-34',col:[.46,.44,.36]},
+  {id:'sanct',name:'Santuário Ancestral',x:-205,z:120,r:48,lv:'subclasse',col:[.3,.36,.42]},
+  {id:'arena',name:'Arena dos Campeões',x:95,z:-225,r:30,lv:'PvP',col:[.6,.52,.38]}];
 const WILD={id:'wild',name:'Terras Selvagens',lv:'',col:[.3,.55,.24]};
 function zoneAt(x,z){let best=null,bd=1e9;for(const q of ZONES){const d=Math.hypot(x-q.x,z-q.z);if(d<q.r&&d<bd){best=q;bd=d}}return best||WILD}
 function heightAt(x,z){

@@ -3,12 +3,12 @@
    Tudo passa pelo WebSocket /ws3d. O servidor decide: movimento válido (anti-velocidade), dano (limitado por classe/nível),
    vida e comportamento dos monstros, quem recebe o abate e as trocas. Limites honestos: a vida do jogador e o inventário
    ainda são guardados pelo navegador (a troca é validada contra o último save no banco). */
-const T = require('./terrain'), WD = require('./wowdata');
+const T = require('./terrain'), WD = require('./wowdata'), WI = require('./wowitems');
 const HALF = T.HALF - 5, NEAR = 150, NEAR2 = NEAR * NEAR, MAXN = 40;
 const SPEED = { walk: 7.4, mount: 15 }, REFILL = 1.55, BURST = 45;
 const TICK = 100, MNEAR2 = 120 * 120, SLEEP2 = 230 * 230;
 const ARENA = { x: 215, z: 175, r: 26 }, GATE = { x: 215, z: 140 }, SPAWN_IN = { x: 215, z: 192 };
-const INV_MAX = 20;
+const INV_MAX = 40;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), rnd = (a, b) => a + Math.random() * (b - a);
 const q1 = v => Math.round(v * 10) / 10, q2 = v => Math.round(v * 100) / 100;
 const cleanText = (s, n) => String(s == null ? '' : s).replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, n);
@@ -33,12 +33,15 @@ module.exports = function ({ verify, DB, WSHOP, log, CLS_MAP }) {
     for (const cat of ['mount', 'wing', 'aura', 'xmog', 'title']) { const id = st.eq && st.eq[cat]; if (id && WSHOP.BY_ID[id] && st.own.includes(id)) out[cat] = id; }
     return out;
   }
-  const pub = p => ({ id: p.id, n: p.name, c: p.cls, ra: p.race, lk: p.look, l: p.lvl, x: q1(p.x), z: q1(p.z), r: q2(p.ry), f: p.f, cos: p.cos, g: p.guild ? p.guild.n : undefined, pv: p.pvp ? 1 : 0, gm: p.gm ? 1 : undefined });
+  const pub = p => ({ id: p.id, n: p.name, c: p.cls, ra: p.race, lk: p.look, l: p.lvl, x: q1(p.x), z: q1(p.z), r: q2(p.ry), f: p.f, cos: p.cos, g: p.guild ? p.guild.n : undefined, pv: p.pvp ? 1 : 0, gm: p.gm ? 1 : undefined, mt: p.eco && p.eco.mnt || undefined, sb: p.eco && p.eco.sub && p.eco.sub.id || undefined, at: p.eco && p.eco.ttl && WI.ACH_BY[p.eco.ttl] ? WI.ACH_BY[p.eco.ttl].t : undefined });
   const sendRaw = (p, s) => { if (p.ws && p.ws.open) p.ws.send(s); };
   const send = (p, o) => sendRaw(p, JSON.stringify(o));
   const bc = (list, o) => { const s = JSON.stringify(o); for (const p of list) sendRaw(p, s); };
   const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
   const sys = (p, x) => send(p, { t: 'ch', k: 's', x });
+  /* economia autoritativa: ouro, mochila, equipamento, banco, drops no chão, forja e subclasses (wowmmo.js) */
+  const MMO = require('./wowmmo')({ DB, log, lock, send, sys, players, byChar, now });
+  MMO.setMountHook(p => { const o = { t: 'u', id: p.id, mt: p.eco && p.eco.mnt || '', at: p.eco && p.eco.ttl && WI.ACH_BY[p.eco.ttl] ? WI.ACH_BY[p.eco.ttl].t : '' }; send(p, o); for (const q of players.values()) if (q.known.has(p.id)) send(q, o); });
 
   /* =============================== MONSTROS =============================== */
   const worldMobs = new Map();   // monstros do mundo aberto
@@ -49,8 +52,17 @@ module.exports = function ({ verify, DB, WSHOP, log, CLS_MAP }) {
     const m = { id: mseq++, type, d, base: lvl || d.lv[0], lvl: lvl || d.lv[0], x, z, hx: x, hz: z, ry: Math.random() * 6.28, state: 'idle', threat: new Map(), contrib: new Set(),
       atkT: 0, respT: 0, stunT: 0, rootT: 0, slowT: 0, dots: [], wt: rnd(1, 5), wx: x, wz: z, agroT: 0, locked: false, boss: !!d.boss, sc: d.sc, rng: d.rng || 2.3 * d.sc, inst: inst || null, lt: 0, lvT: 0 };
     m.mhp = WD.mobHp(d, m.lvl); m.hp = m.mhp; m.dmg = WD.mobDmg(d, m.lvl);
+    if (d.elite) m.elite = true;
     if (inst) inst.mobs.set(m.id, m); else worldMobs.set(m.id, m);
     return m;
+  }
+  /* monstros de elite no mundo aberto: ao (re)nascer, 4% dos monstros comuns viram elite (mais vida, mais dano, loot melhor) */
+  const ELITE_CH = +process.env.WOW_ELITE_CH || .04;
+  function rollElite(m) {
+    if (m.inst || m.boss || m.evx || m.d.elite || m.d.dun) return;
+    const was = !!m.wElite; m.wElite = Math.random() < ELITE_CH;
+    if (m.wElite) { m.elite = true; m.hpMul = 5; m.dmgMul = 1.3; m.sc = m.d.sc * 1.35; m.nm = [m.d.n + ' de Elite']; }
+    else if (was) { m.elite = false; m.hpMul = 1; m.dmgMul = 1; m.sc = m.d.sc; m.nm = undefined; }
   }
   function setLevel(m, lvl, hpMul) {
     m.lvl = lvl; m.mhp = Math.round(WD.mobHp(m.d, lvl) * (hpMul || m.hpMul || 1)); m.hp = m.mhp; m.dmg = WD.mobDmg(m.d, lvl) * (m.dmgMul || 1);
@@ -68,11 +80,18 @@ module.exports = function ({ verify, DB, WSHOP, log, CLS_MAP }) {
     }
     const gz = T.ZONES.find(z => z.id === 'goblin'); let bx = gz.x, bz = gz.z - 6; for (let k = 0; k < 30 && !T.walkable(bx, bz); k++) { bx += 2; bz -= 1; }
     mkMob('boss', bx, bz, null, 8);
+    for (const m of worldMobs.values()) { rollElite(m); if (m.wElite) setLevel(m, m.lvl); }
+    // chefes de zona e chefe mundial (nascem no centro da zona, num ponto andável)
+    for (const [type, zid, dx, dz, resp] of [['ignar', 'volcano', 0, 6, 600], ['ancestral', 'sanct', 0, 0, 300], ['dragao', 'volcano', 14, -16, 1800]]) {
+      const zn = T.ZONES.find(z => z.id === zid); if (!zn) continue; let x = zn.x + dx, z = zn.z + dz;
+      for (let k = 0; k < 40 && !T.walkable(x, z); k++) { x += 1.5; z -= 1; }
+      const m = mkMob(type, x, z, null, WD.MT[type].lv[0]); m.respS = resp; if (WD.MT[type].world) m.world = true;
+    }
   })();
 
   function bcastMob(m, o) { const s = JSON.stringify(o); const src = m.inst ? m.inst.players : players.values(); for (const p of src) if (p.mk && p.mk.has(m.id)) sendRaw(p, s); }
   const ST = { idle: 0, chase: 1, evade: 2, dead: 3 };
-  const mobPub = m => ({ id: m.id, ty: m.type, x: q1(m.x), z: q1(m.z), r: q2(m.ry), l: m.lvl, mh: m.mhp, h: Math.ceil(m.hp), st: ST[m.state], b: m.boss ? 1 : undefined, el: m.elite ? 1 : undefined, nm: m.nm, sc: m.elite ? +m.sc.toFixed(2) : undefined });
+  const mobPub = m => ({ id: m.id, ty: m.type, x: q1(m.x), z: q1(m.z), r: q2(m.ry), l: m.lvl, mh: m.mhp, h: Math.ceil(m.hp), st: ST[m.state], b: m.boss ? 1 : undefined, el: m.elite ? 1 : undefined, nm: m.nm, sc: m.elite ? +m.sc.toFixed(2) : undefined, w: m.world ? 1 : undefined });
 
   const validTarget = (m, p) => p && p.ready && !p.dead && p.inst === m.inst && p.ws && p.ws.open;
   function nearestPlayer(m, maxD) {
@@ -89,29 +108,32 @@ module.exports = function ({ verify, DB, WSHOP, log, CLS_MAP }) {
     send(p, { t: 'pd', d: Math.max(1, Math.round(d)), id: m.id });
   }
   function killMob(m, t) {
-    m.state = 'dead'; m.hp = 0; m.threat.clear(); m.dots.length = 0;
-    if (!m.inst) m.respT = t + (m.evx ? 8 : m.boss ? 120 : 38);
+    m.state = 'dead'; m.hp = 0; m.dots.length = 0;
+    if (!m.inst) m.respT = t + (m.evx ? 8 : m.respS || (m.boss ? 120 : 38));
     const rec = new Set();
     for (const id of m.contrib) { const p = players.get(id); if (p && p.inst === m.inst) rec.add(p); }
     for (const p of [...rec]) if (p.party) for (const mid of p.party.members) { const o = players.get(mid); if (o && o.inst === m.inst && dist(o, m) < 120) rec.add(o); }
-    const n = [...rec].reduce((a, p) => a + (p.party ? 1 : 0), 0);
-    for (const p of rec) send(p, { t: 'k', id: m.id, ty: m.type, l: m.lvl, b: m.boss ? 1 : 0, pb: Math.min(.7, (p.party ? Math.min(.4, .1 * (p.party.members.length - 1)) : 0) + evXp(m)), dun: m.inst ? 1 : 0, rr: rollRare(m, p) });
-    m.contrib.clear();
+    const rare = new Map(); let killer = null, kt = -1;
+    for (const p of rec) { const r = rollRare(m, p); if (r) rare.set(p.id, r); const th = m.threat.get(p.id) || 0; if (th > kt) { kt = th; killer = p; } }
+    for (const p of rec) send(p, { t: 'k', id: m.id, ty: m.type, l: m.lvl, b: m.boss ? 1 : 0, el: m.elite ? 1 : 0, pb: Math.min(.7, (p.party ? Math.min(.4, .1 * (p.party.members.length - 1)) : 0) + evXp(m)), dun: m.inst ? 1 : 0, srv: 1 });
+    try { MMO.onKill(m, rec, killer, { rare }); } catch (e) { console.error('[mmo kill]', e && e.stack || e); }
+    m.contrib.clear(); m.threat.clear();
     bcastMob(m, { t: 'mb', d: [[m.id, q1(m.x), q1(m.z), q2(m.ry), 0, 3]] });
     if (m.evx) evKilled(m);
     if (m.inst) instMobDied(m.inst, m, t);
   }
-  function damageMob(m, d, p, crit) {
+  function damageMob(m, d, p, crit, rm) {
     if (m.state === 'dead') return;
     m.hp -= d; const t = now() / 1000;
     if (p) { m.threat.set(p.id, (m.threat.get(p.id) || 0) + d); m.contrib.add(p.id); if (m.state !== 'chase') { m.state = 'chase'; m.locked = true; } m.agroT = t; }
-    bcastMob(m, { t: 'dm', id: m.id, d, c: crit ? 1 : 0, by: p ? p.id : 0, h: Math.max(0, Math.ceil(m.hp)) });
+    bcastMob(m, { t: 'dm', id: m.id, d, c: crit ? 1 : 0, by: p ? p.id : 0, h: Math.max(0, Math.ceil(m.hp)), rs: rm && rm !== 1 ? (rm < 1 ? 1 : 2) : undefined });
     if (m.hp <= 0) killMob(m, t);
   }
   function respawnMob(m) {
     m.state = 'idle'; m.x = m.hx; m.z = m.hz; m.locked = false; m.threat.clear(); m.contrib.clear(); m.dots.length = 0;
-    const p = nearestPlayer(m, 140); m.lvl = WD.mobLvl(m.base, p ? p.lvl : m.base); setLevel(m, m.lvl);
-    bcastMob(m, { t: 'mu', id: m.id, l: m.lvl, mh: m.mhp, h: m.hp, st: 0, x: q1(m.x), z: q1(m.z) });
+    const p = nearestPlayer(m, 140); m.lvl = WD.mobLvl(m.base, p ? p.lvl : m.base); const wasE = !!m.elite; rollElite(m); setLevel(m, m.lvl);
+    if (wasE !== !!m.elite) { for (const q of players.values()) if (q.mk && q.mk.has(m.id)) { q.mk.delete(m.id); send(q, { t: 'ml', id: m.id }); } }
+    else bcastMob(m, { t: 'mu', id: m.id, l: m.lvl, mh: m.mhp, h: m.hp, st: 0, x: q1(m.x), z: q1(m.z) });
   }
 
   /* =============================== EVENTOS AUTOMÁTICOS ===============================
@@ -248,11 +270,35 @@ module.exports = function ({ verify, DB, WSHOP, log, CLS_MAP }) {
           if (t >= m.atkT) { m.atkT = t + (m.boss ? 1.7 : 2) * (m.enrage ? .7 : 1); bcastMob(m, { t: 'ma', id: m.id }); hurtPlayer(tgt, m, m.dmg * rnd(.85, 1.15)); }
         }
         if (m.type === 'morvak' && m.inst) bossTick(m.inst, m, t, dt);
+        else if (!m.inst && WB[m.type]) wbTick(m, t);
       }
     } else if (m.state === 'evade') {
       const a = Math.atan2(m.hx - m.x, m.hz - m.z); m.ry = a; m.x += Math.sin(a) * m.d.spd * 1.4 * dt; m.z += Math.cos(a) * m.d.spd * 1.4 * dt; m.hp = Math.min(m.mhp, m.hp + m.mhp * .25 * dt); m.threat.clear();
       if (Math.hypot(m.hx - m.x, m.hz - m.z) < 1.2) { m.state = 'idle'; m.hp = m.mhp; m.locked = false; m.contrib.clear(); bcastMob(m, { t: 'mu', id: m.id, l: m.lvl, mh: m.mhp, h: m.hp, st: 0, x: q1(m.x), z: q1(m.z) }); }
     }
+  }
+
+  /* =============================== CHEFES DO MUNDO ABERTO ===============================
+     Ignar (vulcão), Guardião Ancestral (santuário, exigido pela subclasse) e o Dragão Ancestral (chefe mundial).
+     Fases por vida (60% e 25%), círculos de aviso no chão (saia antes de explodir), pulso em área e reforços. */
+  const WB = { ignar: { rain: 10, pulse: 18, add: 'imp' }, ancestral: { rain: 12, pulse: 16, add: 'sentinela' }, dragao: { rain: 8, pulse: 14, add: 'imp', breath: 1 } };
+  const WTEL = [];
+  const nearP = (m, r) => [...players.values()].filter(p => p.ready && !p.dead && !p.inst && dist(p, m) < r);
+  function wbTick(m, t) {
+    const W = WB[m.type], hf = m.hp / m.mhp, ph = hf > .6 ? 1 : hf > .25 ? 2 : 3, live = nearP(m, 60); if (!live.length) return;
+    if (m.phase !== ph) { const was = m.phase; m.phase = ph; if (was) { if (ph === 3) m.enrage = true; for (const p of nearP(m, 120)) send(p, { t: 'wb', k: 'ph', p: ph, n: m.d.n }); } m.nextRain = m.nextRain || t + 6; m.nextPulse = m.nextPulse || t + 12; m.nextAdd = m.nextAdd || t + 20; }
+    if (t >= m.nextRain) { m.nextRain = t + W.rain * (ph === 3 ? .6 : 1); const cnt = Math.min(live.length + (ph - 1), 6);
+      for (let i = 0; i < cnt; i++) { const p = live[i % live.length], x = p.x + (i >= live.length ? rnd(-6, 6) : 0), z = p.z + (i >= live.length ? rnd(-6, 6) : 0); WTEL.push({ x, z, r: 4.5, at: t + 2.4, dmg: m.dmg * 1.5, by: m.id });
+        for (const q of nearP(m, 120)) send(q, { t: 'tel', x: q1(x), z: q1(z), r: 4.5, ms: 2400, k: W.breath ? 'fire' : 'rain' }); } }
+    if (ph >= 2 && t >= m.nextPulse) { m.nextPulse = t + W.pulse; WTEL.push({ x: m.x, z: m.z, r: 11 + m.sc * 1.2, at: t + 2.2, dmg: m.dmg * 2.2, by: m.id });
+      for (const q of nearP(m, 120)) send(q, { t: 'tel', x: q1(m.x), z: q1(m.z), r: 11 + m.sc * 1.2, ms: 2200, k: 'pulse' }); }
+    if (ph >= 2 && t >= m.nextAdd) { m.nextAdd = t + 30; const n = [...worldMobs.values()].filter(x => x.summonBy === m.id && x.state !== 'dead').length;
+      if (n < 4) for (let i = 0; i < 2; i++) { const a = Math.random() * 6.283, mm = mkMob(W.add, m.x + Math.cos(a) * 5, m.z + Math.sin(a) * 5, null, WD.MT[W.add].lv[0]); mm.summonBy = m.id; mm.evx = { mobs: new Set() }; setLevel(mm, Math.max(mm.lvl, m.lvl - 2)); mm.hx = mm.x; mm.hz = mm.z; engage(mm, live[i % live.length], 1); }
+      for (const q of nearP(m, 120)) send(q, { t: 'wb', k: 'add', n: m.d.n }); }
+  }
+  function wtelTick(t) {
+    for (let i = WTEL.length - 1; i >= 0; i--) { const e = WTEL[i]; if (t < e.at) continue; WTEL.splice(i, 1);
+      for (const p of players.values()) { if (!p.ready || p.dead || p.inst) continue; if (Math.hypot(p.x - e.x, p.z - e.z) < e.r) send(p, { t: 'pd', d: Math.round(e.dmg * rnd(.9, 1.1)), id: e.by }); } }
   }
 
   /* =============================== MASMORRA: CRIPTA DE MORVAK =============================== */
@@ -328,12 +374,12 @@ module.exports = function ({ verify, DB, WSHOP, log, CLS_MAP }) {
     if (I.players.size >= 5) return sys(p, 'A masmorra está cheia (máx. 5).');
     resetView(p); I.players.add(p); p.inst = I;
     p.tpTo = { x: SPAWN_IN.x + rnd(-3, 3), z: SPAWN_IN.z + rnd(-1, 1), t: now() }; p.x = p.tpTo.x; p.z = p.tpTo.z;
-    send(p, { t: 'tp', x: q1(p.x), z: q1(p.z) }); send(p, { t: 'inst', on: 1, n: 'Cripta de Morvak' });
+    send(p, { t: 'tp', x: q1(p.x), z: q1(p.z) }); send(p, { t: 'inst', on: 1, n: 'Cripta de Morvak' }); MMO.sendGround(p);
     for (const o of I.players) if (o !== p) sys(o, p.name + ' entrou na masmorra.');
   }
   function leaveInst(p, silent) {
     const I = p.inst; if (!I) return; p.inst = null; I.players.delete(p); if (!silent) resetView(p); else { p.mk = new Set(); p.mc = new Map(); p.known.clear(); }
-    if (!silent && p.ws && p.ws.open) send(p, { t: 'inst', on: 0 });
+    if (!silent && p.ws && p.ws.open) { send(p, { t: 'inst', on: 0 }); MMO.sendGround(p); }
   }
   function exitInst(p) {
     if (!p.inst) return;
@@ -380,47 +426,42 @@ module.exports = function ({ verify, DB, WSHOP, log, CLS_MAP }) {
     if (!trades.delete(tr.id)) return;
     for (const p of [tr.a, tr.b]) { p.trade = null; if (p.ws && p.ws.open) send(p, { t: 'tx', id: tr.id, why: why || '' }); }
   }
-  async function execTrade(tr) {
+  async function execTrade(tr) {   // tudo acontece na memória autoritativa (p.eco) dos dois heróis, num único passo síncrono
     const A = tr.a, B = tr.b; tr.busy = true;
-    const kA = 'wow:' + A.charId, kB = 'wow:' + B.charId;
-    const keys = [kA, kB].sort();
     try {
-      await lock(keys[0], () => lock(keys[1], async () => {
-        const sa = await DB.kvGet(kA), sb = await DB.kvGet(kB); if (!sa || !sb) throw new Error('save');
-        const offA = tr.offer[A.id], offB = tr.offer[B.id];
-        const take = (sv, off) => {   // retira os itens oferecidos do inventário salvo; devolve as unidades retiradas
-          const inv = (sv.inv || []).map(x => Object.assign({}, x)), out = [];
-          for (const o of off.items) {
-            const i = inv.findIndex(x => x.id === o.id); if (i < 0 || !TRADABLE(inv[i])) throw new Error('item');
-            const it = inv[i], n = Math.max(1, o.n | 0);
-            if (it.stack) { if ((it.n | 0) < n) throw new Error('item'); const c = Object.assign({}, it, { n }); out.push(c); it.n -= n; if (it.n <= 0) inv.splice(i, 1); }
-            else { out.push(it); inv.splice(i, 1); }
-          }
-          if (off.gold > (sv.gold | 0)) throw new Error('gold');
-          return { inv, out };
-        };
-        const ra = take(sa, offA), rb = take(sb, offB);
-        const put = (inv, items) => { for (const it of items) { if (it.stack) { const s = inv.find(x => x.id === it.id); if (s) { s.n = (s.n | 0) + (it.n | 0); continue; } } if (inv.length >= INV_MAX) throw new Error('full'); inv.push(it); } };
-        put(ra.inv, rb.out); put(rb.inv, ra.out);
-        sa.inv = ra.inv; sb.inv = rb.inv; sa.gold = (sa.gold | 0) - offA.gold + offB.gold; sb.gold = (sb.gold | 0) - offB.gold + offA.gold;
-        sa.tv = (sa.tv | 0) + 1; sb.tv = (sb.tv | 0) + 1;
-        await DB.kvSet(kA, sa); await DB.kvSet(kB, sb);
-        send(A, { t: 'td', give: ra.out.map(x => ({ id: x.id, n: x.n })), got: rb.out, gold: offB.gold - offA.gold, tv: sa.tv });
-        send(B, { t: 'td', give: rb.out.map(x => ({ id: x.id, n: x.n })), got: ra.out, gold: offA.gold - offB.gold, tv: sb.tv });
-        log('[3d] troca', A.name, B.name, JSON.stringify([offA.items.length, offA.gold, offB.items.length, offB.gold]));
-      }));
+      const ea = A.eco, eb = B.eco; if (!ea || !eb || A.ecoFrozen || B.ecoFrozen) throw new Error('save');
+      const offA = tr.offer[A.id], offB = tr.offer[B.id];
+      const take = (e, off) => {   // confere e retira (numa cópia) os itens oferecidos
+        const inv = e.inv.map(x => Object.assign({}, x)), out = [];
+        for (const o of off.items) {
+          const i = inv.findIndex(x => x.u === o.id || x.id === o.id); if (i < 0 || !TRADABLE(inv[i]) || (WI.MATS[inv[i].id] && WI.MATS[inv[i].id].bound)) throw new Error('item');
+          const it = inv[i], n = Math.max(1, o.n | 0);
+          if (it.stack) { if ((it.n | 0) < n) throw new Error('item'); const c = Object.assign({}, it, { n }); delete c.u; out.push(c); it.n -= n; if (it.n <= 0) inv.splice(i, 1); }
+          else { out.push(it); inv.splice(i, 1); }
+        }
+        if (off.gold > Math.floor(e.gold)) throw new Error('gold');
+        return { inv, out };
+      };
+      const ra = take(ea, offA), rb = take(eb, offB);
+      const put = (inv, items) => { for (const it of items) if (!MMO.addTo(inv, Object.assign({}, it), INV_MAX)) throw new Error('full'); };
+      put(ra.inv, rb.out); put(rb.inv, ra.out);
+      ea.inv = ra.inv; eb.inv = rb.inv; ea.gold = Math.floor(ea.gold) - offA.gold + offB.gold; eb.gold = Math.floor(eb.gold) - offB.gold + offA.gold;
+      MMO.persist(A); MMO.persist(B); MMO.push(A); MMO.push(B);
+      send(A, { t: 'td', srv: 1, gold: offB.gold - offA.gold }); send(B, { t: 'td', srv: 1, gold: offA.gold - offB.gold });
+      log('[3d] troca', A.name, B.name, JSON.stringify([offA.items.length, offA.gold, offB.items.length, offB.gold]));
+      DB.log('trade', { a: A.charId, b: B.charId, ia: ra.out.map(x => x.id), ib: rb.out.map(x => x.id), ga: offA.gold, gb: offB.gold });
       trades.delete(tr.id); A.trade = B.trade = null;
-    } catch (e) { tr.busy = false; const m = ({ item: 'Um item oferecido não está no seu último salvamento. Tente de novo.', gold: 'Ouro insuficiente.', full: 'A mochila do outro jogador está cheia.', save: 'Erro ao ler os heróis.' })[e.message] || 'Erro na troca.'; cancelTrade(tr, m); }
+    } catch (e) { tr.busy = false; const m = ({ item: 'Um item oferecido não está mais na sua mochila.', gold: 'Ouro insuficiente.', full: 'A mochila de um dos jogadores está cheia.', save: 'Inventário ainda sincronizando. Tente de novo.' })[e.message] || 'Erro na troca.'; cancelTrade(tr, m); }
   }
-  async function describeOffer(p, items) {   // descreve (a partir do salvamento no banco) os itens que o jogador diz estar oferecendo
-    const sv = await DB.kvGet('wow:' + p.charId); const inv = (sv && sv.inv) || [], out = [];
-    for (const o of items) { const it = inv.find(x => x.id === o.id); if (!it || !TRADABLE(it)) return null; const n = it.stack ? clamp(o.n | 0, 1, it.n | 0) : 1; out.push(Object.assign({}, it, { n })); }
-    return { out, gold: sv ? sv.gold | 0 : 0 };
+  async function describeOffer(p, items) {   // descreve os itens oferecidos a partir da mochila autoritativa
+    const inv = (p.eco && p.eco.inv) || [], out = [];
+    for (const o of items) { const it = inv.find(x => x.u === o.id || x.id === o.id); if (!it || !TRADABLE(it) || (WI.MATS[it.id] && WI.MATS[it.id].bound)) return null; const n = it.stack ? clamp(o.n | 0, 1, it.n | 0) : 1; out.push(Object.assign({}, it, { n })); }
+    return { out, gold: p.eco ? Math.floor(p.eco.gold) : 0 };
   }
-
   /* =============================== SOCKET =============================== */
   function drop(p) {
     if (!players.delete(p.id)) return;
+    MMO.onLeave(p);
     if (byChar.get(p.charId) === p) byChar.delete(p.charId);
     if (byName.get(p.name.toLowerCase()) === p) byName.delete(p.name.toLowerCase());
     if (p.trade) cancelTrade(p.trade, 'O outro jogador saiu.');
@@ -454,6 +495,7 @@ module.exports = function ({ verify, DB, WSHOP, log, CLS_MAP }) {
           const gn = await DB.kvGet('wowg:' + row.id);
           if (gn) { const g = await loadGuild(gn); if (g && g.mem.find(x => x.c === row.id)) { p.guild = g; const mm = g.mem.find(x => x.c === row.id); mm.l = p.lvl; } }
           ws.send({ t: 'hi', id: p.id, n: players.size, g: p.guild ? p.guild.n : null });
+          try { await MMO.onHi(p); } catch (e) { console.error('[mmo hi]', e.message); }
           await pvpLoad(p); send(p, { t: 'pvs', on: 0, k: p.pk, d: p.pd }); try { p.gm = !!(await DB.kvGet('gm:' + p.accId)); } catch (e) { p.gm = false; } send(p, { t: 'gmst', on: p.gm ? 1 : 0 }); if (evCur) send(p, evPub());
           if (p.guild) { sendRoster(p); for (const o of guildOnline(p.guild)) if (o !== p) sys(o, '[Guilda] ' + p.name + ' entrou no jogo.'); }
         } catch (e) { console.error('[3d]', e.message); ws.close(1011); }
@@ -467,6 +509,7 @@ module.exports = function ({ verify, DB, WSHOP, log, CLS_MAP }) {
   function handle(p, m, t) {
     switch (m.t) {
       case 'm': return onMove(p, m);
+      case 'iv': return MMO.act(p, m);
       case 'cos': return cosUpdate(p);
       case 'h': return onHit(p, m, t);
       case 'pvp': return setPvp(p, !!m.on);
@@ -491,7 +534,7 @@ module.exports = function ({ verify, DB, WSHOP, log, CLS_MAP }) {
       if (m.tp && Math.hypot(x - p.tpTo.x, z - p.tpTo.z) < 9) { p.x = p.tpTo.x; p.z = p.tpTo.z; p.tpTo = null; p.budget = BURST; p.lt = tn; p.ready = true; p.dead = false; return; }
       if (tn - p.tpTo.t < 5000) return; p.tpTo = null;
     }
-    p.budget = Math.min(BURST, p.budget + (tn - p.lt) / 1000 * (f & 1 ? SPEED.mount : SPEED.walk) * REFILL); p.lt = tn;
+    p.budget = Math.min(BURST, p.budget + (tn - p.lt) / 1000 * (f & 1 ? SPEED.mount * MMO.mountSpd(p) : SPEED.walk) * REFILL); p.lt = tn;
     if (m.h != null) p.hpPct = clamp(m.h | 0, 0, 100);
     const lim = p.inst ? ARENA.r + 2 : HALF;
     let nx = clamp(x, -HALF, HALF), nz = clamp(z, -HALF, HALF);
@@ -514,9 +557,12 @@ module.exports = function ({ verify, DB, WSHOP, log, CLS_MAP }) {
     p.hitB = Math.min(24, p.hitB + (t - p.hitT) / 1000 * 9); p.hitT = t; if (p.hitB < 1) return; p.hitB -= 1;
     const mo = (p.inst ? p.inst.mobs : worldMobs).get(m.id | 0); if (!mo || mo.state === 'dead' || mo.inst !== p.inst) return;
     if (dist(p, mo) > 48) return;
-    const cap = WD.atkCap(p.cls, p.lvl), a = clamp(+m.a || 0, 1, cap), mult = clamp(+m.m || 0, .05, 4), cc = clamp(+m.c || .07, .05, .75);
-    const crit = Math.random() < cc; let d = a * mult * rnd(.9, 1.1) * (crit ? 1.8 : 1); d = Math.max(1, Math.round(d));
-    damageMob(mo, d, p, crit);
+    // ataque: o menor entre o que o navegador diz e o que o servidor calcula com o equipamento REAL do herói
+    let mcap = 4;
+    if (m.sk === 1) { const sk = MMO.subSk(p); if (!sk || (p.subT || 0) > t) return; p.subT = t + sk.cd * 1000 - 400; mcap = Math.max(4, sk.m); if (sk.k === 'single' && dist(p, mo) > (sk.rng || 6) + 4) return; }
+    const cap = MMO.srvAtk(p), a = clamp(+m.a || 0, 1, cap), mult = clamp(+m.m || 0, .05, mcap), cc = clamp(+m.c || .07, .05, .75);
+    const crit = Math.random() < cc, el = WD.ELEM[m.e] ? m.e : 'fis', rm = WD.resMul(mo.type, el); let d = a * mult * rnd(.9, 1.1) * (crit ? 1.8 : 1) * rm; d = Math.max(1, Math.round(d));
+    damageMob(mo, d, p, crit, rm);
   }
   /* ---------- PvP: só entre quem ligou o modo PvP, fora da cidade e fora da masmorra. O dano vem do ataque do atacante (limitado pelo servidor) e a vítima aplica com a própria armadura ---------- */
   const PV_SAFE = 50, PV_MUL = .4;
@@ -537,7 +583,7 @@ module.exports = function ({ verify, DB, WSHOP, log, CLS_MAP }) {
     p.hitB = Math.min(24, p.hitB + (t - p.hitT) / 1000 * 9); p.hitT = t; if (p.hitB < 1) return; p.hitB -= 1;
     const q = players.get(m.id | 0); if (!q || q === p || !q.ready || q.dead || !q.pvp || q.inst) return;
     if (dist(p, q) > 48 || inSafe(p) || inSafe(q)) return;
-    const cap = WD.atkCap(p.cls, p.lvl), a = clamp(+m.a || 0, 1, cap), mult = clamp(+m.m || 0, .05, 4), cc = clamp(+m.c || .07, .05, .75);
+    const cap = MMO.srvAtk(p), a = clamp(+m.a || 0, 1, cap), mult = clamp(+m.m || 0, .05, 4), cc = clamp(+m.c || .07, .05, .75);
     const crit = Math.random() < cc; let d = a * mult * rnd(.9, 1.1) * (crit ? 1.8 : 1) * PV_MUL; d = Math.max(1, Math.round(d));
     p.pvT = q.pvT = t; q.lastBy = { id: p.id, t };
     send(q, { t: 'pvd', d, by: p.id, n: p.name, c: crit ? 1 : 0 }); send(p, { t: 'pvh', id: q.id, d, c: crit ? 1 : 0 });
@@ -558,7 +604,7 @@ module.exports = function ({ verify, DB, WSHOP, log, CLS_MAP }) {
     else if (m.k === 'root') { if (!mo.boss) mo.rootT = Math.max(mo.rootT, tt + Math.min(s, 4.2)); }
     else if (m.k === 'slow') mo.slowT = Math.max(mo.slowT, tt + Math.min(s, 6));
     else if (m.k === 'burn') {   // dano contínuo: o servidor calcula com o ataque que o herói pode ter (limitado)
-      const n = clamp(m.s | 0, 1, 8), iv = clamp(+m.iv || .5, .3, 1.2), a = clamp(+m.a || 0, 1, WD.atkCap(p.cls, p.lvl));
+      const n = clamp(m.s | 0, 1, 8), iv = clamp(+m.iv || .5, .3, 1.2), a = clamp(+m.a || 0, 1, MMO.srvAtk(p));
       mo.dots.push({ n, iv, next: tt + iv, d: a * .45, by: p }); if (mo.dots.length > 6) mo.dots.shift();
     }
     if (mo.state === 'idle') engage(mo, p, 1);
@@ -577,6 +623,9 @@ module.exports = function ({ verify, DB, WSHOP, log, CLS_MAP }) {
     if (t - p.chatT < 600) return; p.chatT = t;
     if (p.muteUntil && p.muteUntil > t) return sys(p, 'Você está silenciado por um Game Master.');
     const x = cleanText(m.x, 90); if (!x) return;
+    const nm = (p.gm ? '[GM] ' : '') + p.name;
+    if (m.k === 'l') { const o = { t: 'ch', k: 'l', n: nm, x }; for (const q of players.values()) if (q.ready && q.inst === p.inst && dist(q, p) < 60) send(q, o); return; }   // local: quem está a até 60 m
+    if (m.k === 'a' || m.k === 'i') { const o = { t: 'ch', k: m.k, n: nm, x }; if (m.k === 'i' && t - (p.infoT || 0) < 8000) return sys(p, 'Canal Informações: espere alguns segundos entre mensagens.'); if (m.k === 'i') p.infoT = t; bc([...players.values()], o); return; }   // global e informações: todos online
     if (m.k === 'p') { if (!p.party) return sys(p, 'Você não está em um grupo.'); bc(p.party.members.map(id => players.get(id)).filter(Boolean), { t: 'ch', k: 'p', n: (p.gm ? '[GM] ' : '') + p.name, x }); }
     else if (m.k === 'g') { if (!p.guild) return sys(p, 'Você não está em uma guilda.'); bc(guildOnline(p.guild), { t: 'ch', k: 'g', n: (p.gm ? '[GM] ' : '') + p.name, x }); }
     else if (m.k === 'w') { const o = find(m.n); if (!o || o === p) return sys(p, 'Jogador não encontrado (precisa estar online).'); send(o, { t: 'ch', k: 'w', n: (p.gm ? '[GM] ' : '') + p.name, x }); send(p, { t: 'ch', k: 'wo', n: o.name, x }); }
@@ -697,6 +746,7 @@ module.exports = function ({ verify, DB, WSHOP, log, CLS_MAP }) {
     }
     // monstros
     for (const m of worldMobs.values()) stepMob(m, dt, t);
+    wtelTick(t);
     for (const I of insts.values()) { for (const m of I.mobs.values()) stepMob(m, dt, t); instTick(I, t); }
     if (tick % 2 === 0) {
       for (const p of all) {
@@ -720,9 +770,10 @@ module.exports = function ({ verify, DB, WSHOP, log, CLS_MAP }) {
   }, TICK);
 
   return {
-    onSocket, count: () => players.size, lock,
+    onSocket, count: () => players.size, lock, MMO,
+    ecoOnline(charId) { const p = byChar.get(charId); return p && p.eco ? p : null; },
     setGm(accId, on) { for (const p of players.values()) if (p.accId === accId) { p.gm = !!on; send(p, { t: 'gmst', on: on ? 1 : 0 }); const o = { t: 'u', id: p.id, gm: on ? 1 : 0 }; for (const q of players.values()) if (q.known.has(p.id)) send(q, o); } },
-    admReload(charId) { const p = byChar.get(charId); if (p) send(p, { t: 'adm', k: 'reload' }); },
+    admReload(charId) { const p = byChar.get(charId); if (p) { MMO.freeze(charId); send(p, { t: 'adm', k: 'reload' }); } },
     kick(name) { const p = find(name); if (!p) return false; send(p, { t: 'ch', k: 's', x: 'Você foi removido do jogo por um administrador.' }); send(p, { t: 'kick' }); try { p.ws.close(1000); } catch (e) {} return true; },
     mute(name, mins) { const p = find(name); if (!p) return false; p.muteUntil = now() + clamp(+mins || 5, 1, 1440) * 60e3; send(p, { t: 'ch', k: 's', x: 'Você foi silenciado por um administrador.' }); return true; },
     announce(text) { bc([...players.values()], { t: 'ch', k: 's', x: '📢 ' + cleanText(text, 120) }); },

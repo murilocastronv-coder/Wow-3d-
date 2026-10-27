@@ -53,4 +53,5 @@ function fresh(name, cls, race, look) {
 }
 // arquétipo do jogo clássico usado só para criar o registro do personagem
 const OLD_CLS = c => (WD.CLASSES[c].rng > 6 ? (c === 'cacador' ? 'ranger' : 'arcanist') : 'vanguard');
-module.exports = { convert, sanitize, newLevel, CLS_MAP, fresh, cleanLook, OLD_CLS, WD };
+const ECO_KEYS = ['gold', 'inv', 'eq', 'bank', 'mounts', 'mnt', 'sub', 'qk', 'qa', 'qd', 'achs', 'ttl'];
+module.exports = { ECO_KEYS, convert, sanitize, newLevel, CLS_MAP, fresh, cleanLook, OLD_CLS, WD };

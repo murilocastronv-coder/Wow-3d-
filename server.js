@@ -33,7 +33,7 @@ const INDEX_FILE = pickFile(PUB, 'index', '.html') || path.join(PUB, 'index.html
 const PIXEL_FILE = path.join(PUB, 'pixel.html');
 const WOW_FILE = path.join(PUB, 'wow.html');
 const HOME_FILE = fs.existsSync(WOW_FILE) ? WOW_FILE : fs.existsSync(PIXEL_FILE) ? PIXEL_FILE : INDEX_FILE; // a página inicial é o Reinos de Valdor (3D); o jogo 2D fica em /pixel e o antigo em /classic // a página inicial agora é a versão pixel; o jogo antigo fica em /classic
-const PUBLIC_FILES = new Set(['shared.js', 'favicon.ico', 'MuonlineClaude.apk', 'manifest.json', 'icon-192.png', 'icon-512.png', 'wow.html', 'status.html', 'guerreiro.glb']); // no modo raiz, só estes arquivos são públicos
+const PUBLIC_FILES = new Set(['shared.js', 'favicon.ico', 'MuonlineClaude.apk', 'manifest.json', 'icon-192.png', 'icon-512.png', 'wow.html', 'wowdata.js', 'wowitems.js', 'terrain.js', 'status.html', 'guerreiro.glb']); // no modo raiz, só estes arquivos são públicos
 const now = () => Date.now();
 const rand = (a, b) => a + Math.random() * (b - a);
 const randi = (a, b) => Math.floor(rand(a, b + 1));
@@ -46,7 +46,7 @@ const log = (...a) => console.log(new Date().toISOString(), ...a);
 /* =============================== BANCO DE DADOS =============================== */
 const DB = (() => {
   let pool = null, mem = null, timer = null;
-  const FILE = path.join(__dirname, 'data.json');
+  const FILE = process.env.DATA_FILE || path.join(__dirname, 'data.json');   // DATA_FILE: banco em arquivo separado (testes)
   const persist = () => { clearTimeout(timer); timer = setTimeout(() => fs.writeFile(FILE, JSON.stringify(mem), e => e && console.error(e)), 400); };
   return {
     kind: () => pool ? 'postgres' : 'arquivo',
@@ -153,9 +153,14 @@ const DB = (() => {
       if (pool) return (await pool.query('SELECT id,username,ulow,email FROM accounts')).rows;
       return mem.accounts.map(a => ({ id: a.id, username: a.username, ulow: a.ulow, email: a.email }));
     },
+    async logsOf(kind) {   // [{at,data}] de um tipo de registro (auditoria do painel de ADM)
+      if (pool) return (await pool.query('SELECT at,data FROM logs WHERE kind=$1 ORDER BY id DESC LIMIT 2000', [kind])).rows.reverse();
+      return (mem.logs || []).filter(l => l.kind === kind);
+    },
     async log(kind, data) {
       log('[log]', kind, JSON.stringify(data));
       if (pool) pool.query('INSERT INTO logs(kind,data) VALUES($1,$2)', [kind, JSON.stringify(data)]).catch(() => {});
+      else if (mem) { (mem.logs = mem.logs || []).push({ at: new Date().toISOString(), kind, data }); if (mem.logs.length > 3000) mem.logs.splice(0, mem.logs.length - 3000); persist(); }
     },
   };
 })();
@@ -240,7 +245,7 @@ async function getPrivStats() {   // só o administrador: online agora + picos
    SÓ a conta do dono: o servidor confere usuário E e-mail da conta em TODA ação (o botão escondido no jogo não é segurança).
    Variáveis opcionais no Render: ADMIN_USER (padrão murilonv) e ADMIN_EMAIL (padrão murilocastronv@gmail.com). */
 const ADM_USER = (process.env.ADMIN_USER || 'murilonv').toLowerCase(), ADM_MAIL = (process.env.ADMIN_EMAIL || 'murilocastronv@gmail.com').toLowerCase();
-const ADM_SIC = { arma: '🗡️', cabeca: '⛑️', peito: '🥋', pernas: '👖', anel: '💍' }, ADM_SLOTS = Object.keys(ADM_SIC);
+const ADM_SIC = { arma: '🗡️', cabeca: '⛑️', peito: '🥋', pernas: '👖', anel: '💍' }, ADM_SLOTS = Object.keys(ADM_SIC), ADM_SLOTS2 = require('./wowitems').SLOT_KEYS;
 function admItem(slot, rar, lvl, name) {   // mesma fórmula do jogo (genItem)
   lvl = Math.max(1, lvl | 0); const f = 1 + rar * .4, it = { id: 'a' + crypto.randomBytes(5).toString('hex'), slot, rar, lvl, ic: ADM_SIC[slot], name };
   if (slot === 'arma') it.atk = Math.round(2 + lvl * 1.5 * f);
@@ -261,6 +266,8 @@ async function admChar(name) {   // personagem pelo nome (sem diferenciar maiús
   return c ? await DB.charById(c.id) : null;
 }
 async function admEdit(row, fn) {   // altera o salvamento do personagem direto no servidor (vale também com o jogador offline)
+  try { await RT.MMO.flushChar(row.id); } catch (e) {}   // grava antes o inventário autoritativo do jogador online
+  RT.MMO.freeze(row.id);
   return RT.lock('wow:' + row.id, async () => {
     const sv = (await DB.kvGet('wow:' + row.id)) || WOW.convert(row.data); sv.inv = Array.isArray(sv.inv) ? sv.inv : []; sv.eq = sv.eq && typeof sv.eq === 'object' ? sv.eq : {};
     const r = fn(sv); sv.tv = (sv.tv | 0) + 1; sv.t = Date.now();
@@ -288,6 +295,20 @@ async function admApi(b, req) {
   if (act === 'stats') return await getPrivStats();
   if (act === 'gms') { return { list: (await DB.kvGet('gm:list')) || [] }; }
   if (act === 'announce') { const x = admClean(b.text, 120); if (!x) return [400, { error: 'empty' }]; RT.announce(x); return { ok: true }; }
+  /* Reinos de Valdor: drops, raridade, receitas do Ferreiro, subclasses e auditoria */
+  if (act === 'mmocfg') { const c = RT.MMO.cfg(); return { drop: c.drop, recipes: c.recipes, sub: { minLvl: c.sub.minLvl, fees: c.sub.fees, need: c.sub.need, combat: c.sub.combat, off: c.sub.off || [], defs: Object.keys(c.sub.defs) }, fail: c.fail, mats: Object.keys(require('./wowitems').MATS) }; }
+  if (act === 'mmoset') {
+    const patch = {}; if (b.drop && typeof b.drop === 'object') patch.drop = b.drop; if (Array.isArray(b.recipes)) patch.recipes = b.recipes.slice(0, 60);
+    if (b.sub && typeof b.sub === 'object') patch.sub = { fees: b.sub.fees, need: b.sub.need, combat: b.sub.combat, minLvl: b.sub.minLvl, off: b.sub.off };
+    if (b.fail && typeof b.fail === 'object') patch.fail = { keepMats: Math.max(0, Math.min(1, +b.fail.keepMats || 0)) };
+    await RT.MMO.saveCfg(patch); DB.log('adm_mmoset', { by: adm.id, keys: Object.keys(patch) }); return { ok: true };
+  }
+  if (act === 'audit') {
+    const kinds = ['loot_kill', 'loot_pick', 'loot_expire', 'item_drop', 'item_destroy', 'shop_buy', 'shop_sell', 'bank_in', 'bank_out', 'quest_done', 'mount_buy', 'forge', 'upgrade', 'sub_step', 'sub_awaken', 'sub_learn', 'sub_lvl', 'trade', 'adm_mmoset', 'adm_sub'];
+    const k = kinds.includes(String(b.kind)) ? String(b.kind) : 'loot_kill', who = b.name ? await admChar(b.name) : null;
+    let L = await DB.logsOf(k); if (who) L = L.filter(x => { const d = typeof x.data === 'string' ? JSON.parse(x.data) : x.data; return d && (d.c === who.id || d.a === who.id || d.b === who.id); });
+    return { kind: k, kinds, rows: L.slice(-100).reverse() };
+  }
   // daqui para baixo: ações em outro jogador, pelo nome do personagem
   const row = await admChar(b.name); if (!row) return [404, { error: 'noChar' }];
   const online = RT.isOnline(row.id), nm = (row.data && row.data.name) || '?';
@@ -303,8 +324,13 @@ async function admApi(b, req) {
     await DB.kvSet('gm:list', L); RT.setGm(row.account_id, on); DB.log('adm_gm', { acc: row.account_id, on }); return { ok: true };
   }
   if (act === 'give') {
-    const slot = String(b.slot || ''), rar = Math.max(0, Math.min(5, b.rar | 0)), lvl = Math.max(1, Math.min(WD.LV_CAP, b.lvl | 0 || 1)), qty = Math.max(1, Math.min(10, b.qty | 0 || 1));
-    if (!ADM_SLOTS.includes(slot)) return [400, { error: 'slot' }];
+    const slot = String(b.slot || ''), rar = Math.max(0, Math.min(6, b.rar | 0)), lvl = Math.max(1, Math.min(WD.LV_CAP, b.lvl | 0 || 1)), qty = Math.max(1, Math.min(10, b.qty | 0 || 1));
+    if (!ADM_SLOTS2.includes(slot)) return [400, { error: 'slot' }];
+    if (!ADM_SLOTS.includes(slot) || rar > 5) {   // espaços novos e raridade Mítica: usa o gerador compartilhado
+      const WIt = require('./wowitems'), cls = ((await DB.kvGet('wow:' + row.id)) || {}).cls || 'guerreiro'; let full = false;
+      await admEdit(row, sv => { for (let i = 0; i < qty; i++) { if (sv.inv.length >= 40) { full = true; break; } const it = WIt.gen(lvl, rar, slot, cls); if (b.itemName) it.name = admClean(b.itemName, 30); sv.inv.push(it); } });
+      DB.log('adm_give', { to: row.id, slot, rar, lvl, qty }); return { ok: true, full };
+    }
     const rn = ['Gasto', 'Comum', 'Incomum', 'Raro', 'Épico', 'Lendário'], base = { arma: 'Arma', cabeca: 'Elmo', peito: 'Peitoral', pernas: 'Grevas', anel: 'Anel' };
     const name = admClean(b.itemName, 30) || (base[slot] + ' ' + rn[rar] + ' de Game Master');
     let full = false; await admEdit(row, sv => { for (let i = 0; i < qty; i++) { if (sv.inv.length >= 40) { full = true; break; } sv.inv.push(admItem(slot, rar, lvl, name)); } });
@@ -320,6 +346,19 @@ async function admApi(b, req) {
       else { const i = sv.inv.findIndex(x => x && x.id === String(b.id)); if (i >= 0) { sv.inv.splice(i, 1); removed = true; } }
     });
     DB.log('adm_take', { to: row.id }); return { ok: removed };
+  }
+  if (act === 'givemat') {   // materiais, joias, poções e itens da especialização (auditável)
+    const WIt = require('./wowitems'), id = String(b.id || ''), n = Math.max(1, Math.min(999, b.n | 0 || 1)); if (!WIt.MATS[id]) return [400, { error: 'mat' }];
+    let full = false; await admEdit(row, sv => { const it = WIt.mkStack(id, n), s = sv.inv.find(x => x && x.stack && x.id === id && (x.n | 0) + n <= WIt.STACK_MAX); if (s) s.n = (s.n | 0) + n; else if (sv.inv.length >= 40) full = true; else sv.inv.push(it); });
+    DB.log('adm_givemat', { by: adm.id, to: row.id, id, n }); return { ok: !full, full };
+  }
+  if (act === 'sub') {   // consultar / corrigir a subclasse de um herói (auditável)
+    if (b.set && typeof b.set === 'object') {
+      const WIt = require('./wowitems'); await admEdit(row, sv => { const s = sv.sub = sv.sub || {}; const v = b.set;
+        if (v.step != null) s.step = Math.max(0, Math.min(7, v.step | 0)); if (v.id !== undefined) s.id = WIt.SUB.defs[v.id] ? v.id : null; if (v.lvl != null) s.lvl = Math.max(0, Math.min(WIt.SUB.maxLvl, v.lvl | 0)); if (v.pts != null) s.pts = Math.max(0, Math.min(200, v.pts | 0)); if (v.reset) { s.tree = s.id ? { a1: 1 } : {}; } });
+      DB.log('adm_sub', { by: adm.id, c: row.id, set: b.set }); return { ok: true };
+    }
+    const sv = (await DB.kvGet('wow:' + row.id)) || {}; return { name: nm, cls: sv.cls, lvl: sv.lvl, sub: sv.sub || null, gold: sv.gold };
   }
   if (act === 'kick') return { ok: RT.kick(nm) };
   if (act === 'mute') return { ok: RT.mute(nm, b.min) };
@@ -490,8 +529,10 @@ const API = {
     const [row, err] = await wowAuth(b); if (err) return err;
     return RT.lock('wow:' + row.id, async () => {
       const prev = await DB.kvGet('wow:' + row.id) || WOW.convert(row.data);
-      if (b.sv && (b.sv.tv | 0) < (prev.tv | 0)) return [409, { error: 'stale', sv: prev }];   // um salvamento antigo não pode desfazer uma troca
       const sv = WOW.sanitize(b.sv, prev); if (!sv) return [400, { error: 'bad_save' }];
+      // ouro, mochila, equipamento, banco, montarias e subclasse são do SERVIDOR (wowmmo.js): o navegador não grava esses campos
+      for (const k of WOW.ECO_KEYS) { if (prev[k] !== undefined) sv[k] = prev[k]; else delete sv[k]; }
+      sv.tv = prev.tv | 0; if (prev.fresh) sv.fresh = 1;   // a marca de herói novo só sai depois que o servidor entrega o kit inicial (wowmmo)
       await DB.kvSet('wow:' + row.id, sv); RT.setLevel(row.id, sv.lvl); return { ok: true };
     });
   },
@@ -511,6 +552,7 @@ const API = {
     const since = +new URL(req.url, 'http://x').searchParams.get('since') || 0, t = Date.now();
     return { last: wowMsgId, msgs: wowMsgs.filter(m => m.id > since && t - m.t < 30000).map(m => ({ id: m.id, n: m.n, x: m.x, age: t - m.t })) };
   },
+  'GET /api/wow/ranking': async () => ({ rows: await RT.MMO.ranking() }),   // ranking do 3D: nível, subclasse e abates
   'GET /api/wow/catalog': async () => ({ cur: SHOP.cur, on: SHOP.enabled(), items: WSHOP.ITEMS }),
   'POST /api/wow/shop': async b => {   // o que a conta já comprou e o que está equipado
     const t = verify(b.token); if (!t) return [401, { error: 'auth' }];
